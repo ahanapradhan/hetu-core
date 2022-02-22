@@ -1491,7 +1491,7 @@
             <dependency>
                 <groupId>org.mockito</groupId>
                 <artifactId>mockito-core</artifactId>
-                <version>1.9.5</version>
+                <version>1.10.19</version>
             </dependency>
             <dependency>
                 <groupId>com.google.guava</groupId>
@@ -1722,6 +1722,7 @@
                             <item>${air.main.basedir}/src/main/resource/license/license-header-alternate-2012.txt</item>
                             <item>${air.main.basedir}/src/main/resource/license/license-header-alternate-2020.txt</item>
                             <item>${air.main.basedir}/src/main/resource/license/license-header-alternate-2021.txt</item>
+                            <item>${air.main.basedir}/src/main/resource/license/license-header-alternate-2022.txt</item>
                             <item>${air.main.basedir}/src/main/resource/license/license-header-third.txt</item>
                         </validHeaders>
                     </configuration>
