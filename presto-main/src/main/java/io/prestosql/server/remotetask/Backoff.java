@@ -136,8 +136,17 @@ public class Backoff
     {
         lastRequestStart = 0;
         firstFailureTime = 0;
-        failureCount = 0;
+        setFailureCount(0, false);
         lastFailureTime = 0;
+    }
+
+    private synchronized void setFailureCount(int n, boolean isInc)
+    {
+        if (isInc) {
+            failureCount = failureCount + n;
+            return;
+        }
+        failureCount = n;
     }
 
     /**
@@ -148,7 +157,7 @@ public class Backoff
         long now = ticker.read();
 
         lastFailureTime = now;
-        failureCount++;
+        setFailureCount(1, true);
         if (lastRequestStart != 0) {
             failureRequestTimeTotal += now - lastRequestStart;
             lastRequestStart = 0;
@@ -160,11 +169,10 @@ public class Backoff
             return false;
         }
 
-        if (failureCount < minTries) {
+        if (getFailureCount() < minTries) {
             return false;
         }
-
-        return failureCount > maxTries;
+        return getFailureCount() >= maxTries;
     }
 
     /**
@@ -186,7 +194,7 @@ public class Backoff
         long now = ticker.read();
 
         lastFailureTime = now;
-        failureCount++;
+        setFailureCount(1, true);
         if (lastRequestStart != 0) {
             failureRequestTimeTotal += now - lastRequestStart;
             lastRequestStart = 0;
@@ -198,7 +206,7 @@ public class Backoff
             return false;
         }
 
-        if (failureCount < minTries) {
+        if (getFailureCount() < minTries) {
             return false;
         }
 
@@ -208,7 +216,7 @@ public class Backoff
 
     public synchronized long getBackoffDelayNanos()
     {
-        int tmpFailureCount = (int) min(backoffDelayIntervalsNanos.length, this.failureCount);
+        int tmpFailureCount = (int) min(backoffDelayIntervalsNanos.length, getFailureCount());
         if (tmpFailureCount == 0) {
             return 0;
         }
