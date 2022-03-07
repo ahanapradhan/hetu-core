@@ -14,6 +14,10 @@
  */
 package io.prestosql.snapshot;
 
+import com.esotericsoftware.kryo.Kryo;
+import com.esotericsoftware.kryo.io.Input;
+import com.esotericsoftware.kryo.io.Output;
+import com.esotericsoftware.kryo.util.DefaultInstantiatorStrategy;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableSet;
 import io.airlift.log.Logger;
@@ -28,6 +32,7 @@ import io.prestosql.spi.QueryId;
 import io.prestosql.spi.block.Block;
 import io.prestosql.spi.filesystem.HetuFileSystemClient;
 import io.prestosql.spi.snapshot.BlockEncodingSerdeProvider;
+import org.objenesis.strategy.StdInstantiatorStrategy;
 
 import javax.inject.Inject;
 
@@ -71,6 +76,13 @@ public class SnapshotUtils
     // Key is query id; value is number of attempts
     private final Map<String, Long> snapshotsToDelete = new ConcurrentHashMap<>();
     private final ScheduledThreadPoolExecutor deleteSnapshotExecutor = new ScheduledThreadPoolExecutor(1);
+    private static final ThreadLocal<Kryo> kryoPool = ThreadLocal.withInitial(() -> {
+        Kryo kryo = new Kryo();
+        // Configure the Kryo instance.
+        kryo.setInstantiatorStrategy(new DefaultInstantiatorStrategy(new StdInstantiatorStrategy()));
+        kryo.setRegistrationRequired(false);
+        return kryo;
+    });
 
     @Inject
     public SnapshotUtils(FileSystemClientManager fileSystemClientManager, SnapshotConfig snapshotConfig, InternalNodeManager nodeManager)
@@ -113,11 +125,13 @@ public class SnapshotUtils
     {
         if (storeType == SnapshotStoreType.FILESYSTEM) {
             String profile = snapshotConfig.getSnapshotProfile();
+            String spillProfile = snapshotConfig.getSpillProfile();
+            boolean spillToHdfs = snapshotConfig.isSpillToHdfs();
             Path root = Paths.get(rootPath);
             try {
                 HetuFileSystemClient fs = profile == null ?
                         fileSystemClientManager.getFileSystemClient(root) : fileSystemClientManager.getFileSystemClient(profile, root);
-                return new SnapshotFileBasedClient(fs, root);
+                return new SnapshotFileBasedClient(fs, root, fileSystemClientManager, spillProfile, spillToHdfs, snapshotConfig.isSnapshotUseKryoSerialization());
             }
             catch (Exception e) {
                 LOG.warn(e, "Failed to create SnapshotFileBasedClient");
@@ -134,13 +148,13 @@ public class SnapshotUtils
     /**
      * Store the state of snapshotStateId in snapshot store
      */
-    public void storeState(SnapshotStateId snapshotStateId, Object state)
+    public void storeState(SnapshotStateId snapshotStateId, Object state, SnapshotDataCollector dataCollector)
             throws Exception
     {
         requireNonNull(snapshotStoreClient);
         requireNonNull(state);
 
-        snapshotStoreClient.storeState(snapshotStateId, state);
+        snapshotStoreClient.storeState(snapshotStateId, state, dataCollector);
     }
 
     /**
@@ -149,38 +163,38 @@ public class SnapshotUtils
      * - NO_STATE: bug situation
      * - Other object: previously saved state
      */
-    public Optional<Object> loadState(SnapshotStateId snapshotStateId)
+    public Optional<Object> loadState(SnapshotStateId snapshotStateId, SnapshotDataCollector dataCollector)
             throws Exception
     {
         requireNonNull(snapshotStoreClient);
-        return snapshotStoreClient.loadState(snapshotStateId);
+        return snapshotStoreClient.loadState(snapshotStateId, dataCollector);
     }
 
-    public void storeFile(SnapshotStateId snapshotStateId, Path sourceFile)
+    public void storeFile(SnapshotStateId snapshotStateId, Path sourceFile, SnapshotDataCollector dataCollector)
             throws Exception
     {
         requireNonNull(snapshotStoreClient);
         requireNonNull(sourceFile);
 
-        snapshotStoreClient.storeFile(snapshotStateId, sourceFile);
+        snapshotStoreClient.storeFile(snapshotStateId, sourceFile, dataCollector);
     }
 
-    public Boolean loadFile(SnapshotStateId snapshotStateId, Path targetFile)
+    public Boolean loadFile(SnapshotStateId snapshotStateId, Path targetFile, SnapshotDataCollector dataCollector)
             throws Exception
     {
         requireNonNull(snapshotStoreClient);
         requireNonNull(targetFile);
 
-        return snapshotStoreClient.loadFile(snapshotStateId, targetFile);
+        return snapshotStoreClient.loadFile(snapshotStateId, targetFile, dataCollector);
     }
 
-    public void storeSnapshotResult(String queryId, Map<Long, SnapshotResult> result)
+    public void storeSnapshotResult(String queryId, Map<Long, SnapshotInfo> result)
             throws Exception
     {
         snapshotStoreClient.storeSnapshotResult(queryId, result);
     }
 
-    public Map<Long, SnapshotResult> loadSnapshotResult(String queryId)
+    public Map<Long, SnapshotInfo> loadSnapshotResult(String queryId)
             throws Exception
     {
         return snapshotStoreClient.loadSnapshotResult(queryId);
@@ -201,24 +215,41 @@ public class SnapshotUtils
     /**
      * Serialize state to outputStream
      */
-    public static void serializeState(Object state, OutputStream outputStream)
+    public static void serializeState(Object state, OutputStream outputStream, boolean useKryo)
             throws IOException
     {
-        // java serialization
-        ObjectOutputStream oos = new ObjectOutputStream(outputStream);
-        oos.writeObject(state);
-        oos.flush();
+        if (useKryo) {
+            // Kryo serialization
+            Output output = new Output(outputStream);
+            Kryo kryo = kryoPool.get();
+            kryo.writeClassAndObject(output, state);
+            output.flush();
+        }
+        else {
+            // java serialization
+            ObjectOutputStream oos = new ObjectOutputStream(outputStream);
+            oos.writeObject(state);
+            oos.flush();
+        }
     }
 
     /**
      * Deserialize state from inputStream
      */
-    public static Object deserializeState(InputStream inputStream)
+    public static Object deserializeState(InputStream inputStream, boolean useKryo)
             throws IOException, ClassNotFoundException
     {
-        // java deserialization
-        ObjectInputStream ois = new ObjectInputStream(inputStream);
-        return ois.readObject();
+        if (useKryo) {
+            // Kryo deserialization
+            Input input = new Input(inputStream);
+            Kryo kryo = kryoPool.get();
+            return kryo.readClassAndObject(input);
+        }
+        else {
+            // java deserialization
+            ObjectInputStream ois = new ObjectInputStream(inputStream);
+            return ois.readObject();
+        }
     }
 
     /**

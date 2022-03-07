@@ -16,6 +16,8 @@ package io.prestosql.snapshot;
 
 import io.hetu.core.filesystem.HetuLocalFileSystemClient;
 import io.hetu.core.filesystem.LocalConfig;
+import io.prestosql.execution.TaskId;
+import io.prestosql.filesystem.FileSystemClientManager;
 import io.prestosql.testing.assertions.Assert;
 import org.testng.annotations.Test;
 
@@ -35,8 +37,35 @@ public class TestSnapshotFileBasedClient
     public void testSnapshotResult()
             throws Exception
     {
-        SnapshotFileBasedClient client = new SnapshotFileBasedClient(new HetuLocalFileSystemClient(new LocalConfig(new Properties()), Paths.get(ROOT_PATH_STR)), Paths.get(ROOT_PATH_STR));
+        SnapshotFileBasedClient client = new SnapshotFileBasedClient(new HetuLocalFileSystemClient(new LocalConfig(new Properties()), Paths.get(ROOT_PATH_STR)), Paths.get(ROOT_PATH_STR), new FileSystemClientManager(), null, false, false);
         String queryId = "query1";
+        LinkedHashMap<Long, SnapshotInfo> map = new LinkedHashMap<>();
+        map.put(3L, SnapshotInfo.withStatus(SnapshotResult.SUCCESSFUL));
+        map.put(1L, SnapshotInfo.withStatus(SnapshotResult.FAILED));
+        map.put(5L, SnapshotInfo.withStatus(SnapshotResult.FAILED_FATAL));
+        map.put(8L, SnapshotInfo.withStatus(SnapshotResult.SUCCESSFUL));
+
+        // Test store and Load
+        client.storeSnapshotResult(queryId, map);
+        LinkedHashMap<Long, SnapshotInfo> resultMap = (LinkedHashMap<Long, SnapshotInfo>) client.loadSnapshotResult(queryId);
+        Assert.assertEquals(map.get(3L).getSnapshotResult(), resultMap.get(3L).getSnapshotResult());
+        Assert.assertEquals(map.get(1L).getSnapshotResult(), resultMap.get(1L).getSnapshotResult());
+        Assert.assertEquals(map.get(5L).getSnapshotResult(), resultMap.get(5L).getSnapshotResult());
+        Assert.assertEquals(map.get(8L).getSnapshotResult(), resultMap.get(8L).getSnapshotResult());
+    }
+
+    /**
+     * Test store, load snapshot state
+     * @throws Exception
+     */
+    @Test
+    public void testSnapshotStateWithKryo()
+            throws Exception
+    {
+        SnapshotFileBasedClient client = new SnapshotFileBasedClient(new HetuLocalFileSystemClient(new LocalConfig(new Properties()), Paths.get(ROOT_PATH_STR)), Paths.get(ROOT_PATH_STR), new FileSystemClientManager(), null, false, true);
+        String queryId = "query1";
+        TaskId taskId = new TaskId(queryId, 1, 1);
+        SnapshotStateId snapshotStateId = new SnapshotStateId(2, taskId, 10);
         LinkedHashMap<Long, SnapshotResult> map = new LinkedHashMap<>();
         map.put(3L, SnapshotResult.SUCCESSFUL);
         map.put(1L, SnapshotResult.FAILED);
@@ -44,8 +73,32 @@ public class TestSnapshotFileBasedClient
         map.put(8L, SnapshotResult.SUCCESSFUL);
 
         // Test store and Load
-        client.storeSnapshotResult(queryId, map);
-        LinkedHashMap<Long, SnapshotResult> resultMap = (LinkedHashMap<Long, SnapshotResult>) client.loadSnapshotResult(queryId);
-        Assert.assertEquals(map, resultMap);
+        client.storeState(snapshotStateId, map, null);
+        client.loadState(snapshotStateId, null);
+        Assert.assertEquals(map, client.loadState(snapshotStateId, null).get());
+    }
+
+    /**
+     * Test store, load snapshot state
+     * @throws Exception
+     */
+    @Test
+    public void testSnapshotStateWithJava()
+            throws Exception
+    {
+        SnapshotFileBasedClient client = new SnapshotFileBasedClient(new HetuLocalFileSystemClient(new LocalConfig(new Properties()), Paths.get(ROOT_PATH_STR)), Paths.get(ROOT_PATH_STR), new FileSystemClientManager(), null, false, false);
+        String queryId = "query1";
+        TaskId taskId = new TaskId(queryId, 1, 1);
+        SnapshotStateId snapshotStateId = new SnapshotStateId(2, taskId, 10);
+        LinkedHashMap<Long, SnapshotResult> map = new LinkedHashMap<>();
+        map.put(3L, SnapshotResult.SUCCESSFUL);
+        map.put(1L, SnapshotResult.FAILED);
+        map.put(5L, SnapshotResult.FAILED_FATAL);
+        map.put(8L, SnapshotResult.SUCCESSFUL);
+
+        // Test store and Load
+        client.storeState(snapshotStateId, map, null);
+        client.loadState(snapshotStateId, null);
+        Assert.assertEquals(map, client.loadState(snapshotStateId, null).get());
     }
 }

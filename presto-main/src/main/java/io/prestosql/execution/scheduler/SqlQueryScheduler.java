@@ -311,6 +311,7 @@ public class SqlQueryScheduler
     public synchronized void cancelToResume()
     {
         if (!resumed) {
+            snapshotManager.setRestoreStartTime(System.currentTimeMillis());
             // Resume at most once for each scheduler
             resumed = true;
             new Thread(() -> {
@@ -772,7 +773,7 @@ public class SqlQueryScheduler
                     }
 
                     // perform some scheduling work
-                    /* Todo(nitin) get groupSize specification from the ResourceGroupManager */
+                    /* Get groupSize specification from the ResourceGroupManager */
                     int maxSplitGroupSize = getOptimalSmallSplitGroupSize();
                     ScheduleResult result = stageSchedulers.get(stage.getStageId())
                             .schedule(maxSplitGroupSize);

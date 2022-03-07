@@ -271,7 +271,9 @@ import static io.prestosql.SystemSessionProperties.getTaskWriterCount;
 import static io.prestosql.SystemSessionProperties.isCTEReuseEnabled;
 import static io.prestosql.SystemSessionProperties.isCrossRegionDynamicFilterEnabled;
 import static io.prestosql.SystemSessionProperties.isEnableDynamicFiltering;
+import static io.prestosql.SystemSessionProperties.isNonBlockingSpillOrderby;
 import static io.prestosql.SystemSessionProperties.isSpillEnabled;
+import static io.prestosql.SystemSessionProperties.isSpillForOuterJoinEnabled;
 import static io.prestosql.SystemSessionProperties.isSpillOrderBy;
 import static io.prestosql.SystemSessionProperties.isSpillReuseExchange;
 import static io.prestosql.SystemSessionProperties.isSpillWindowOperator;
@@ -1238,6 +1240,7 @@ public class LocalExecutionPlanner
             }
 
             boolean spillEnabled = isSpillEnabled(context.getSession()) && isSpillOrderBy(context.getSession());
+            boolean spillNonBlocking = isNonBlockingSpillOrderby(context.getSession());
 
             OperatorFactory operator = new OrderByOperatorFactory(
                     context.getNextOperatorId(),
@@ -1250,7 +1253,8 @@ public class LocalExecutionPlanner
                     pagesIndexFactory,
                     spillEnabled,
                     Optional.of(spillerFactory),
-                    orderingCompiler);
+                    orderingCompiler,
+                    spillNonBlocking);
 
             return new PhysicalOperation(operator, source.getLayout(), context, source);
         }
@@ -2437,7 +2441,9 @@ public class LocalExecutionPlanner
             PhysicalOperation probeSource = probeNode.accept(this, context);
 
             // Plan build
-            boolean spillEnabled = isSpillEnabled(session) && node.isSpillable().orElseThrow(() -> new IllegalArgumentException("spillable not yet set"));
+            boolean spillEnabled = isSpillEnabled(session)
+                    && node.isSpillable().orElseThrow(() -> new IllegalArgumentException("spillable not yet set"))
+                    && probeSource.getPipelineExecutionStrategy() == UNGROUPED_EXECUTION;
             JoinBridgeManager<PartitionedLookupSourceFactory> lookupSourceFactory =
                     createLookupSourceFactory(node, buildNode, buildSymbols, buildHashSymbol, probeSource, context, spillEnabled);
 
@@ -2514,6 +2520,12 @@ public class LocalExecutionPlanner
 
             boolean buildOuter = node.getType() == RIGHT || node.getType() == FULL;
             int taskCount = buildContext.getDriverInstanceCount().orElse(1);
+            /* Spill can take outer */
+            boolean canOuterSpill = isSpillForOuterJoinEnabled(session);
+            boolean spillAllowed = spillEnabled;
+            if (buildOuter && spillEnabled) {
+                spillAllowed = canOuterSpill;
+            }
 
             Optional<JoinFilterFunctionFactory> filterFunctionFactory = node.getFilter()
                     .map(filterExpression -> compileJoinFilterFunction(
@@ -2556,7 +2568,8 @@ public class LocalExecutionPlanner
                                     .collect(toImmutableList()),
                             taskCount,
                             buildSource.getLayout(),
-                            buildOuter),
+                            buildOuter,
+                            canOuterSpill),
                     buildOutputTypes);
 
             ImmutableList.Builder<OperatorFactory> factoriesBuilder = new ImmutableList.Builder();
@@ -2597,7 +2610,7 @@ public class LocalExecutionPlanner
                     searchFunctionFactories,
                     10_000,
                     pagesIndexFactory,
-                    spillEnabled && !buildOuter && taskCount > 1,
+                    spillAllowed && taskCount > 1,
                     singleStreamSpillerFactory);
 
             factoriesBuilder.add(hashBuilderOperatorFactory);
