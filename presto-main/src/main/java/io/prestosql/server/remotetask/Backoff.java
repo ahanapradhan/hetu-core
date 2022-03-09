@@ -75,14 +75,13 @@ public class Backoff
     public Backoff(int minTries, Duration maxFailureInterval, Ticker ticker, List<Duration> backoffDelayIntervals, int maxTries)
     {
         checkArgument(minTries > 0, "minTries must be at least 1");
-        checkArgument(maxTries > 0, "maxTries must be at least 1");
         requireNonNull(maxFailureInterval, "maxFailureInterval is null");
         requireNonNull(ticker, "ticker is null");
         requireNonNull(backoffDelayIntervals, "backoffDelayIntervals is null");
         checkArgument(!backoffDelayIntervals.isEmpty(), "backoffDelayIntervals must contain at least one entry");
 
         this.minTries = minTries;
-        this.maxTries = maxTries;
+        this.maxTries = (minTries < maxTries) ? maxTries : minTries;
         this.maxFailureIntervalNanos = maxFailureInterval.roundTo(NANOSECONDS);
         this.ticker = ticker;
         this.backoffDelayIntervalsNanos = backoffDelayIntervals.stream()
@@ -100,7 +99,7 @@ public class Backoff
         checkArgument(!backoffDelayIntervals.isEmpty(), "backoffDelayIntervals must contain at least one entry");
 
         this.minTries = minTries;
-        this.maxTries = minTries + MAX_RETRIES; // to guaranty higher max retry value when min retry is > MAX_RETRIES
+        this.maxTries = (minTries < MAX_RETRIES) ? MAX_RETRIES : minTries;
         this.maxFailureIntervalNanos = maxFailureInterval.roundTo(NANOSECONDS);
         this.ticker = ticker;
         this.backoffDelayIntervalsNanos = backoffDelayIntervals.stream()
