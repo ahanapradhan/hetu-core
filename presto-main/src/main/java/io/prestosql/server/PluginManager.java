@@ -23,6 +23,10 @@ import io.prestosql.connector.ConnectorManager;
 import io.prestosql.cube.CubeManager;
 import io.prestosql.eventlistener.EventListenerManager;
 import io.prestosql.execution.resourcegroups.ResourceGroupManager;
+import io.prestosql.failuredetector.FailureDetector;
+import io.prestosql.failuredetector.FailureDetectorManager;
+import io.prestosql.failuredetector.MaxRetryFailureRetryFactory;
+import io.prestosql.spi.failuredetector.FailureRetryFactory;
 import io.prestosql.filesystem.FileSystemClientManager;
 import io.prestosql.heuristicindex.HeuristicIndexerManager;
 import io.prestosql.metadata.MetadataManager;
@@ -109,6 +113,7 @@ public class PluginManager
     private final SeedStoreManager seedStoreManager;
     private final HetuMetaStoreManager hetuMetaStoreManager;
     private final FileSystemClientManager fileSystemClientManager;
+    private final FailureDetectorManager failureDetectorManager;
     private final HeuristicIndexerManager heuristicIndexerManager;
     private final SessionPropertyDefaults sessionPropertyDefaults;
     private final ArtifactResolver resolver;
@@ -136,7 +141,8 @@ public class PluginManager
             SeedStoreManager seedStoreManager,
             FileSystemClientManager fileSystemClientManager,
             HetuMetaStoreManager hetuMetaStoreManager,
-            HeuristicIndexerManager heuristicIndexerManager)
+            HeuristicIndexerManager heuristicIndexerManager,
+            FailureDetectorManager failureDetectorManager)
     {
         requireNonNull(nodeInfo, "nodeInfo is null");
         requireNonNull(config, "config is null");
@@ -168,6 +174,7 @@ public class PluginManager
         this.fileSystemClientManager = requireNonNull(fileSystemClientManager, "fileSystemClientManager is null");
         this.hetuMetaStoreManager = requireNonNull(hetuMetaStoreManager, "hetuMetaStoreManager is null");
         this.heuristicIndexerManager = requireNonNull(heuristicIndexerManager, "heuristicIndexerManager is null");
+        this.failureDetectorManager = requireNonNull(failureDetectorManager, "failureDetectorManager is null");
     }
 
     public void loadPlugins()
@@ -341,6 +348,11 @@ public class PluginManager
         for (IndexFactory indexFactory : plugin.getIndexFactories()) {
             log.info("Loading index factory");
             heuristicIndexerManager.loadIndexFactories(indexFactory);
+        }
+
+        for (FailureRetryFactory failureRetryFactory : plugin.getFailureRetryFactory()) {
+            log.info("Registering failure retry policy provider %s", failureRetryFactory.getName());
+            FailureDetectorManager.addFailureRetryFactory(failureRetryFactory);
         }
 
         installFunctionsPlugin(plugin);

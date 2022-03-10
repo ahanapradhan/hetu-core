@@ -80,6 +80,8 @@ import io.prestosql.execution.scheduler.LegacyNetworkTopology;
 import io.prestosql.execution.scheduler.NodeScheduler;
 import io.prestosql.execution.scheduler.NodeSchedulerConfig;
 import io.prestosql.execution.warnings.WarningCollector;
+import io.prestosql.failuredetector.FailureDetectorManager;
+import io.prestosql.failuredetector.NoOpFailureDetector;
 import io.prestosql.filesystem.FileSystemClientManager;
 import io.prestosql.heuristicindex.HeuristicIndexerManager;
 import io.prestosql.index.IndexManager;
@@ -437,7 +439,8 @@ public class LocalQueryRunner
                 seedStoreManager,
                 fileSystemClientManager,
                 hetuMetaStoreManager,
-                heuristicIndexerManager);
+                heuristicIndexerManager,
+                new FailureDetectorManager(new NoOpFailureDetector()));
 
         connectorManager.addConnectorFactory(globalSystemConnectorFactory);
         connectorManager.createConnection(GlobalSystemConnector.NAME, GlobalSystemConnector.NAME, ImmutableMap.of());

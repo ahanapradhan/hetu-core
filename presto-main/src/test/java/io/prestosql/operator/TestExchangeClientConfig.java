@@ -36,13 +36,11 @@ public class TestExchangeClientConfig
                 .setMaxBufferSize(new DataSize(32, Unit.MEGABYTE))
                 .setConcurrentRequestMultiplier(3)
                 .setMinErrorDuration(new Duration(5, TimeUnit.MINUTES))
-                .setMaxErrorDuration(new Duration(5, TimeUnit.MINUTES))
+             //   .setMaxErrorDuration(new Duration(5, TimeUnit.MINUTES))
                 .setMaxResponseSize(new HttpClientConfig().getMaxContentLength())
                 .setPageBufferClientMaxCallbackThreads(25)
                 .setClientThreads(25)
-                .setAcknowledgePages(true)
-                .setDetectTimeoutFailures(true)
-                .setMaxRetryCount(10));
+                .setAcknowledgePages(true));
     }
 
     @Test
@@ -57,21 +55,18 @@ public class TestExchangeClientConfig
                 .put("exchange.client-threads", "2")
                 .put("exchange.page-buffer-client.max-callback-threads", "16")
                 .put("exchange.acknowledge-pages", "false")
-                .put("exchange.max-retry-count", "100")
-                .put("exchange.is-timeout-failure-detection-enabled", "false")
                 .build();
 
         ExchangeClientConfig expected = new ExchangeClientConfig()
                 .setMaxBufferSize(new DataSize(1, Unit.GIGABYTE))
                 .setConcurrentRequestMultiplier(13)
                 .setMinErrorDuration(new Duration(33, TimeUnit.SECONDS))
-                .setMaxErrorDuration(new Duration(33, TimeUnit.SECONDS))
+              //  .setMaxErrorDuration(new Duration(33, TimeUnit.SECONDS))
                 .setMaxResponseSize(new DataSize(1, Unit.MEGABYTE))
                 .setClientThreads(2)
                 .setPageBufferClientMaxCallbackThreads(16)
-                .setAcknowledgePages(false)
-                .setMaxRetryCount(100)
-                .setDetectTimeoutFailures(false);
+                .setAcknowledgePages(false);
+
 
         assertFullMapping(properties, expected);
     }

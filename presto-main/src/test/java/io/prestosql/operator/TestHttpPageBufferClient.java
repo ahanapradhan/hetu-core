@@ -109,14 +109,13 @@ public class TestHttpPageBufferClient
         String instanceId = "testing instance id";
         HttpPageBufferClient client = new HttpPageBufferClient(new TestingHttpClient(processor, scheduler),
                 expectedMaxSize,
-                new Duration(1, TimeUnit.MINUTES),
                 true,
                 new TaskLocation(location, instanceId),
                 callback,
                 scheduler,
                 pageBufferClientCallbackExecutor,
                 false,
-                null, new NoOpFailureDetector(), false, 10);
+                null, null);
 
         assertStatus(client, location, "queued", 0, 0, 0, 0, "not scheduled");
 
@@ -197,14 +196,13 @@ public class TestHttpPageBufferClient
         String instanceId = "testing instance id";
         HttpPageBufferClient client = new HttpPageBufferClient(new TestingHttpClient(processor, scheduler),
                 new DataSize(10, Unit.MEGABYTE),
-                new Duration(1, TimeUnit.MINUTES),
                 true,
                 new TaskLocation(location, instanceId),
                 callback,
                 scheduler,
                 pageBufferClientCallbackExecutor,
                 false,
-                null, new NoOpFailureDetector(), false, 10);
+                null, null);
 
         assertStatus(client, location, "queued", 0, 0, 0, 0, "not scheduled");
 
@@ -240,14 +238,13 @@ public class TestHttpPageBufferClient
         String instanceId = "testing instance id";
         HttpPageBufferClient client = new HttpPageBufferClient(new TestingHttpClient(processor, scheduler),
                 new DataSize(10, Unit.MEGABYTE),
-                new Duration(1, TimeUnit.MINUTES),
                 true,
                 new TaskLocation(location, instanceId),
                 callback,
                 scheduler,
                 pageBufferClientCallbackExecutor,
                 false,
-                null, new NoOpFailureDetector(), false, 10);
+                null, null);
 
         assertStatus(client, location, "queued", 0, 0, 0, 0, "not scheduled");
 
@@ -312,14 +309,13 @@ public class TestHttpPageBufferClient
         String instanceId = "testing instance id";
         HttpPageBufferClient client = new HttpPageBufferClient(new TestingHttpClient(processor, scheduler),
                 new DataSize(10, Unit.MEGABYTE),
-                new Duration(1, TimeUnit.MINUTES),
                 true,
                 new TaskLocation(location, instanceId),
                 callback,
                 scheduler,
                 pageBufferClientCallbackExecutor,
                 false,
-                null, new NoOpFailureDetector(), false, 10);
+                null, null);
 
         assertStatus(client, location, "queued", 0, 0, 0, 0, "not scheduled");
 
@@ -370,15 +366,13 @@ public class TestHttpPageBufferClient
         String instanceId = "testing instance id";
         HttpPageBufferClient client = new HttpPageBufferClient(new TestingHttpClient(processor, scheduler),
                 new DataSize(10, Unit.MEGABYTE),
-                new Duration(30, TimeUnit.SECONDS),
                 true,
                 new TaskLocation(location, instanceId),
                 callback,
                 scheduler,
-                ticker,
                 pageBufferClientCallbackExecutor,
                 false,
-                null, new NoOpFailureDetector(), true, 10);
+                null, null);
 
         assertStatus(client, location, "queued", 0, 0, 0, 0, "not scheduled");
 
@@ -439,15 +433,13 @@ public class TestHttpPageBufferClient
         String instanceId = "testing instance id";
         HttpPageBufferClient client = new HttpPageBufferClient(new TestingHttpClient(processor, scheduler),
                 new DataSize(10, Unit.MEGABYTE),
-                new Duration(300, TimeUnit.SECONDS),
                 true,
                 new TaskLocation(location, instanceId),
                 callback,
                 scheduler,
-                ticker,
                 pageBufferClientCallbackExecutor,
                 false,
-                null, new MockNodeCrashFailureDetector(), false, 10);
+                null, null);
 
         assertStatus(client, location, "queued", 0, 0, 0, 0, "not scheduled");
 
@@ -485,15 +477,13 @@ public class TestHttpPageBufferClient
         String instanceId = "testing instance id";
         HttpPageBufferClient client = new HttpPageBufferClient(new TestingHttpClient(processor, scheduler),
                 new DataSize(10, Unit.MEGABYTE),
-                new Duration(300, TimeUnit.SECONDS),
                 true,
                 new TaskLocation(location, instanceId),
                 callback,
                 scheduler,
-                ticker,
                 pageBufferClientCallbackExecutor,
                 false,
-                null, new MockActiveFailureDetector(), false, 10);
+                null, null);
 
         assertStatus(client, location, "queued", 0, 0, 0, 0, "not scheduled");
 
