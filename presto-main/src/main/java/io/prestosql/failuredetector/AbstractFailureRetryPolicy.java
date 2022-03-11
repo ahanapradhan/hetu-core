@@ -1,8 +1,8 @@
 package io.prestosql.failuredetector;
 
 import io.prestosql.spi.HostAddress;
-import io.prestosql.spi.failuredetector.IBackoff;
 import io.prestosql.spi.failuredetector.FailureRetryPolicy;
+import io.prestosql.spi.failuredetector.IBackoff;
 
 public abstract class AbstractFailureRetryPolicy
                 implements FailureRetryPolicy
