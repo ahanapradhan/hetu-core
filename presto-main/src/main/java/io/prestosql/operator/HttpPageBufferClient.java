@@ -431,7 +431,7 @@ public final class HttpPageBufferClient
                 Throwable throwable = rewriteException(t);
                 boolean fail = failureRetryPolicy.hasFailed(fromUri(uri));
 
-                if (!(throwable instanceof PrestoException) && fail) {
+                if ((!(throwable instanceof PrestoException) || (throwable instanceof PageTransportErrorException)) && fail) {
                     String message = format("%s (%s - %s failures, failure duration %s, total failed request time %s)",
                             WORKER_NODE_ERROR,
                             uri,
@@ -447,7 +447,7 @@ public final class HttpPageBufferClient
                     }
                     throwable = new PageTransportTimeoutException(fromUri(uri), message, throwable);
                 }
-                handleFailure(throwable, resultFuture);
+                handleFailure(throwable, resultFuture, fail);
             }
         }, pageBufferClientCallbackExecutor);
     }
@@ -505,7 +505,7 @@ public final class HttpPageBufferClient
         checkState(!Thread.holdsLock(lock), "Cannot execute this method while holding a lock");
     }
 
-    private void handleFailure(Throwable t, HttpResponseFuture<?> expectedFuture)
+    private void handleFailure(Throwable t, HttpResponseFuture<?> expectedFuture, boolean failed)
     {
         // Can not delegate to other callback while holding a lock on this
         checkNotHoldsLock(this);
@@ -513,7 +513,7 @@ public final class HttpPageBufferClient
         requestsFailed.incrementAndGet();
         requestsCompleted.incrementAndGet();
 
-        if (t instanceof PrestoException) {
+        if (t instanceof PrestoException && failed) {
             clientCallback.clientFailed(HttpPageBufferClient.this, t);
         }
 
@@ -524,6 +524,11 @@ public final class HttpPageBufferClient
             lastUpdate = DateTime.now();
         }
         clientCallback.requestComplete(HttpPageBufferClient.this);
+    }
+
+    private void handleFailure(Throwable t, HttpResponseFuture<?> expectedFuture)
+    {
+        handleFailure(t, expectedFuture, true);
     }
 
     @Override
