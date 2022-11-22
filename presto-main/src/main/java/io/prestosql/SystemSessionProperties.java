@@ -64,6 +64,8 @@ import static java.util.Objects.requireNonNull;
 
 public final class SystemSessionProperties
 {
+    public static final String CM_PARAMETER = "cm_parameter";
+
     public static final String OPTIMIZE_HASH_GENERATION = "optimize_hash_generation";
     public static final String JOIN_DISTRIBUTION_TYPE = "join_distribution_type";
     public static final String JOIN_MAX_BROADCAST_TABLE_SIZE = "join_max_broadcast_table_size";
@@ -170,6 +172,7 @@ public final class SystemSessionProperties
     public static final String SPILL_TO_HDFS_ENABLED = "spill_to_hdfs_enabled";
     // CTE Optimization configurations
     public static final String CTE_REUSE_ENABLED = "cte_reuse_enabled";
+    public static final String SUBPLAN_MERGE_ENABLED = "subplan_merge_enabled";
     public static final String CTE_MAX_QUEUE_SIZE = "cte_max_queue_size";
     public static final String CTE_MAX_PREFETCH_QUEUE_SIZE = "cte_max_prefetch_queue_size";
     public static final String DELETE_TRANSACTIONAL_TABLE_DIRECT = "delete_transactional_table_direct";
@@ -803,6 +806,11 @@ public final class SystemSessionProperties
                         "Enabled CTE reuse",
                         featuresConfig.isCteReuseEnabled(),
                         false),
+                booleanProperty(
+                        SUBPLAN_MERGE_ENABLED,
+                        "Enabled merging common subplans",
+                        featuresConfig.isSubplanMergeEnabled(),
+                        false),
                 integerProperty(
                         CTE_MAX_QUEUE_SIZE,
                         "Max queue size to store cte data (for every cte reference)",
@@ -1049,6 +1057,11 @@ public final class SystemSessionProperties
                 booleanProperty(TRANSFORM_SELF_JOIN_CTE_TO_WINDOW_AGGREGATE,
                         "Transform Sub-query SelfJoin using window aggregates",
                         featuresConfig.isTransformSelfJoinAggregatesToWindow(),
+                        false),
+                integerProperty(
+                        CM_PARAMETER,
+                        "Set cost model parameter",
+                        featuresConfig.getCostModelParameter(),
                         false));
     }
 
@@ -1606,6 +1619,11 @@ public final class SystemSessionProperties
         return session.getSystemProperty(CTE_REUSE_ENABLED, Boolean.class);
     }
 
+    public static boolean isSubplanMergeEnabled(Session session)
+    {
+        return session.getSystemProperty(SUBPLAN_MERGE_ENABLED, Boolean.class);
+    }
+
     public static int getCteMaxPrefetchQueueSize(Session session)
     {
         return session.getSystemProperty(CTE_MAX_PREFETCH_QUEUE_SIZE, Integer.class);
@@ -1841,5 +1859,10 @@ public final class SystemSessionProperties
     public static boolean shouldTransformSelfJoinAggregatesToWindowFunction(Session session)
     {
         return session.getSystemProperty(TRANSFORM_SELF_JOIN_CTE_TO_WINDOW_AGGREGATE, Boolean.class);
+    }
+
+    public static int getCostModelParameter(Session session)
+    {
+        return session.getSystemProperty(CM_PARAMETER, Integer.class);
     }
 }

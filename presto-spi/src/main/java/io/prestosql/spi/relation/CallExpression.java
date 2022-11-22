@@ -114,6 +114,25 @@ public final class CallExpression
     }
 
     @Override
+    public boolean equals2(Object o)
+    {
+        if (this == o) {
+            return true;
+        }
+        if (o == null || getClass() != o.getClass()) {
+            return false;
+        }
+        CallExpression other = (CallExpression) o;
+        boolean b = Objects.equals(this.functionHandle, other.functionHandle);
+        for (int i = 0; i < this.arguments.size(); i++) {
+            RowExpression one = this.arguments.get(i);
+            RowExpression two = other.arguments.get(i);
+            b = b && one.equals2(two);
+        }
+        return b;
+    }
+
+    @Override
     public int hashCode()
     {
         return Objects.hash(functionHandle, arguments);

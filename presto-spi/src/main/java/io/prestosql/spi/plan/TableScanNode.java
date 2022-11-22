@@ -39,8 +39,7 @@ import static java.util.Objects.requireNonNull;
 
 @Immutable
 public class TableScanNode
-        extends PlanNode
-{
+        extends PlanNode {
     private final TableHandle table;
     private final List<Symbol> outputSymbols;
     private final Map<Symbol, ColumnHandle> assignments;
@@ -63,8 +62,7 @@ public class TableScanNode
             List<Symbol> outputs,
             Map<Symbol, ColumnHandle> assignments,
             ReuseExchangeOperator.STRATEGY strategy,
-            UUID reuseTableScanMappingId, Integer consumerTableScanNodeCount, boolean forDelete)
-    {
+            UUID reuseTableScanMappingId, Integer consumerTableScanNodeCount, boolean forDelete) {
         return new TableScanNode(id, table, outputs, assignments, TupleDomain.all(), Optional.empty(), strategy, reuseTableScanMappingId, consumerTableScanNodeCount, forDelete);
     }
 
@@ -78,8 +76,7 @@ public class TableScanNode
             @JsonProperty("strategy") ReuseExchangeOperator.STRATEGY strategy,
             @JsonProperty("reuseTableScanMappingId") UUID reuseTableScanMappingId,
             @JsonProperty("consumerTableScanNodeCount") Integer consumerTableScanNodeCount,
-            @JsonProperty("forDelete") boolean forDelete)
-    {
+            @JsonProperty("forDelete") boolean forDelete) {
         // This constructor is for JSON deserialization only. Do not use.
         super(id);
         this.table = requireNonNull(table, "table is null");
@@ -105,8 +102,7 @@ public class TableScanNode
             ReuseExchangeOperator.STRATEGY strategy,
             UUID reuseTableScanMappingId,
             Integer consumerTableScanNodeCount,
-            boolean forDelete)
-    {
+            boolean forDelete) {
         super(id);
         this.table = requireNonNull(table, "table is null");
         this.outputSymbols = ImmutableList.copyOf(requireNonNull(outputs, "outputs is null"));
@@ -121,71 +117,59 @@ public class TableScanNode
         this.forDelete = forDelete;
     }
 
-    public RowExpression getFilterExpr()
-    {
+    public RowExpression getFilterExpr() {
         return filterExpr;
     }
 
-    public void setFilterExpr(RowExpression filterExpr)
-    {
+    public void setFilterExpr(RowExpression filterExpr) {
         this.filterExpr = filterExpr;
     }
 
-    public void setStrategy(ReuseExchangeOperator.STRATEGY strategy)
-    {
+    public void setStrategy(ReuseExchangeOperator.STRATEGY strategy) {
         this.strategy = strategy;
     }
 
-    public void setReuseTableScanMappingId(UUID reuseTableScanMappingId)
-    {
+    public void setReuseTableScanMappingId(UUID reuseTableScanMappingId) {
         this.reuseTableScanMappingId = reuseTableScanMappingId;
     }
 
     @JsonProperty("table")
-    public TableHandle getTable()
-    {
+    public TableHandle getTable() {
         return table;
     }
 
     @JsonProperty("forDelete")
-    public boolean isForDelete()
-    {
+    public boolean isForDelete() {
         return forDelete;
     }
 
     @Override
     @JsonProperty("outputSymbols")
-    public List<Symbol> getOutputSymbols()
-    {
+    public List<Symbol> getOutputSymbols() {
         return outputSymbols;
     }
 
     @JsonProperty("assignments")
-    public Map<Symbol, ColumnHandle> getAssignments()
-    {
+    public Map<Symbol, ColumnHandle> getAssignments() {
         return assignments;
     }
 
     @JsonProperty("strategy")
-    public ReuseExchangeOperator.STRATEGY getStrategy()
-    {
+    public ReuseExchangeOperator.STRATEGY getStrategy() {
         return strategy;
     }
 
     @JsonProperty("reuseTableScanMappingId")
-    public UUID getReuseTableScanMappingId()
-    {
+    public UUID getReuseTableScanMappingId() {
         return reuseTableScanMappingId;
     }
 
-    public void setConsumerTableScanNodeCount(Integer consumerTableScanNodeCount)
-    {
+    public void setConsumerTableScanNodeCount(Integer consumerTableScanNodeCount) {
         this.consumerTableScanNodeCount = consumerTableScanNodeCount;
     }
 
     @JsonProperty("consumerTableScanNodeCount")
-    public Integer getConsumerTableScanNodeCount()
-    {
+    public Integer getConsumerTableScanNodeCount() {
         return consumerTableScanNodeCount;
     }
 
@@ -197,34 +181,29 @@ public class TableScanNode
      * This field is used to make sure that predicates which were previously pushed down
      * do not get lost in subsequent refinements of the table layout.
      */
-    public TupleDomain<ColumnHandle> getEnforcedConstraint()
-    {
+    public TupleDomain<ColumnHandle> getEnforcedConstraint() {
         // enforcedConstraint can be pretty complex. As a result, it may incur a significant cost to serialize, store, and transport.
         checkState(enforcedConstraint != null, "enforcedConstraint should only be used in planner. It is not transported to workers.");
         return enforcedConstraint;
     }
 
     @JsonProperty("predicate")
-    public Optional<RowExpression> getPredicate()
-    {
+    public Optional<RowExpression> getPredicate() {
         return predicate;
     }
 
     @Override
-    public List<PlanNode> getSources()
-    {
+    public List<PlanNode> getSources() {
         return ImmutableList.of();
     }
 
     @Override
-    public <R, C> R accept(PlanVisitor<R, C> visitor, C context)
-    {
+    public <R, C> R accept(PlanVisitor<R, C> visitor, C context) {
         return visitor.visitTableScan(this, context);
     }
 
     @Override
-    public String toString()
-    {
+    public String toString() {
         return toStringHelper(this)
                 .add("table", table)
                 .add("outputSymbols", outputSymbols)
@@ -237,14 +216,12 @@ public class TableScanNode
     }
 
     @Override
-    public PlanNode replaceChildren(List<PlanNode> newChildren)
-    {
+    public PlanNode replaceChildren(List<PlanNode> newChildren) {
         checkArgument(newChildren.isEmpty(), "newChildren is not empty");
         return this;
     }
 
-    public boolean isSourcesEqual(List<PlanNode> n1, List<PlanNode> n2)
-    {
+    public boolean isSourcesEqual(List<PlanNode> n1, List<PlanNode> n2) {
         if (n1.size() != n2.size()) {
             return false;
         }
@@ -263,8 +240,7 @@ public class TableScanNode
         return false;
     }
 
-    public boolean isSymbolsEqual(List<Symbol> s1, List<Symbol> s2)
-    {
+    public boolean isSymbolsEqual(List<Symbol> s1, List<Symbol> s2) {
         if (s1 == null && s2 == null) {
             return true;
         }
@@ -287,43 +263,43 @@ public class TableScanNode
         return true;
     }
 
-    public static String getActualColName(String var)
-    {
+    public static String getActualColName(String var) {
         // TODO: Instead of stripping off _, we can get corresponding name from assigments column mapping.
         int index = var.lastIndexOf("_");
         if (index == -1 || isInteger(var.substring(index + 1)) == false) {
             return var;
-        }
-        else {
+        } else {
             return var.substring(0, index);
         }
     }
 
-    private static boolean isInteger(String st)
-    {
+    private static boolean isInteger(String st) {
         try {
             Integer.parseInt(st);
-        }
-        catch (NumberFormatException ex) {
+        } catch (NumberFormatException ex) {
             return false;
         }
 
         return true;
     }
 
-    public boolean isPredicateSame(TableScanNode curr)
-    {
+    public boolean isPredicateSame(TableScanNode curr) {
         boolean returnValue = false;
         if (filterExpr != null) {
             returnValue = filterExpr.absEquals(curr.getFilterExpr());
-        }
-        else if (curr.getFilterExpr() == null) {
+        } else if (curr.getFilterExpr() == null) {
             returnValue = true;
         }
 
         if (returnValue) {
             if (predicate.isPresent()) {
-                return predicate.get().absEquals(curr.getPredicate().get());
+                // return predicate.get().absEquals(curr.getPredicate().get());
+                if (!curr.getPredicate().isPresent()) {
+                    return false;
+                }
+                RowExpression thisExp = predicate.get();
+                RowExpression otherExp = curr.getPredicate().get();
+                return thisExp.absEquals(otherExp);
             }
             return true;
         }

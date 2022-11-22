@@ -28,14 +28,12 @@ import static java.util.Objects.requireNonNull;
 
 @Immutable
 public class SpecialForm
-        extends RowExpression
-{
+        extends RowExpression {
     private final Form form;
     private final Type returnType;
     private final List<RowExpression> arguments;
 
-    public SpecialForm(Form form, Type returnType, RowExpression... arguments)
-    {
+    public SpecialForm(Form form, Type returnType, RowExpression... arguments) {
         this(form, returnType, ImmutableList.copyOf(arguments));
     }
 
@@ -43,41 +41,35 @@ public class SpecialForm
     public SpecialForm(
             @JsonProperty("form") Form form,
             @JsonProperty("returnType") Type returnType,
-            @JsonProperty("arguments") List<RowExpression> arguments)
-    {
+            @JsonProperty("arguments") List<RowExpression> arguments) {
         this.form = requireNonNull(form, "form is null");
         this.returnType = requireNonNull(returnType, "returnType is null");
         this.arguments = requireNonNull(arguments, "arguments is null");
     }
 
     @JsonProperty
-    public Form getForm()
-    {
+    public Form getForm() {
         return form;
     }
 
     @Override
     @JsonProperty("returnType")
-    public Type getType()
-    {
+    public Type getType() {
         return returnType;
     }
 
     @JsonProperty
-    public List<RowExpression> getArguments()
-    {
+    public List<RowExpression> getArguments() {
         return arguments;
     }
 
     @Override
-    public String toString()
-    {
+    public String toString() {
         return form.name() + "(" + Joiner.on(", ").join(arguments) + ")";
     }
 
     @Override
-    public boolean equals(Object o)
-    {
+    public boolean equals(Object o) {
         if (this == o) {
             return true;
         }
@@ -91,19 +83,16 @@ public class SpecialForm
     }
 
     @Override
-    public int hashCode()
-    {
+    public int hashCode() {
         return Objects.hash(form, returnType, arguments);
     }
 
     @Override
-    public <R, C> R accept(RowExpressionVisitor<R, C> visitor, C context)
-    {
+    public <R, C> R accept(RowExpressionVisitor<R, C> visitor, C context) {
         return visitor.visitSpecialForm(this, context);
     }
 
-    public enum Form
-    {
+    public enum Form {
         IF,
         NULL_IF,
         SWITCH,
@@ -118,5 +107,24 @@ public class SpecialForm
         ROW_CONSTRUCTOR,
         BIND,
         BETWEEN_AND,
+    }
+
+    @Override
+    public boolean absEquals(Object o) {
+        SpecialForm that = (SpecialForm) o;
+        boolean b = form == that.form &&
+                Objects.equals(returnType, that.returnType);
+
+        if (arguments.size() != that.arguments.size()) {
+            return false;
+        }
+
+        for (int i = 0; i < arguments.size(); i++) {
+            RowExpression one = arguments.get(i);
+            RowExpression other = that.arguments.get(i);
+            b = b && one.equals2(other);
+        }
+
+        return b;
     }
 }

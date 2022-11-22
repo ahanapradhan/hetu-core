@@ -64,6 +64,9 @@ import static java.util.concurrent.TimeUnit.MINUTES;
 })
 public class FeaturesConfig
 {
+
+    private int CMParameter = 2;
+
     @VisibleForTesting
     static final String SPILL_ENABLED = "experimental.spill-enabled";
     @VisibleForTesting
@@ -194,6 +197,7 @@ public class FeaturesConfig
     private double adaptivePartialAggregationUniqueRowsRatioThreshold = 0.8;
     private boolean transformSelfJoinToWindow = true;
     private boolean transformSelfJoinAggregateToWindow = true;
+    private boolean subplanMergeEnabled = true;
 
     @Config("optimizer.transform-self-join-to-window")
     public FeaturesConfig setTransformSelfJoinToWindow(boolean value)
@@ -1390,6 +1394,18 @@ public class FeaturesConfig
         return this;
     }
 
+    public boolean isSubplanMergeEnabled()
+    {
+        return subplanMergeEnabled;
+    }
+
+    @Config("experimental.subplan-reuse-enabled")
+    public FeaturesConfig setSubplanMergeEnabled(boolean subplanMergeEnabled)
+    {
+        this.subplanMergeEnabled = subplanMergeEnabled;
+        return this;
+    }
+
     public int getMaxQueueSize()
     {
         return maxQueueSize;
@@ -1614,5 +1630,10 @@ public class FeaturesConfig
     {
         this.adaptivePartialAggregationUniqueRowsRatioThreshold = adaptivePartialAggregationUniqueRowsRatioThreshold;
         return this;
+    }
+
+    public int getCostModelParameter()
+    {
+        return CMParameter;
     }
 }

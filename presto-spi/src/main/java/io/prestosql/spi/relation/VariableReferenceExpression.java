@@ -15,6 +15,7 @@ package io.prestosql.spi.relation;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import io.prestosql.spi.plan.TableScanNode;
 import io.prestosql.spi.type.Type;
 
 import javax.annotation.concurrent.Immutable;
@@ -25,48 +26,41 @@ import static java.util.Objects.requireNonNull;
 
 @Immutable
 public class VariableReferenceExpression
-        extends RowExpression
-{
+        extends RowExpression {
     private final String name;
     private final Type type;
 
     @JsonCreator
     public VariableReferenceExpression(
             @JsonProperty("name") String name,
-            @JsonProperty("type") Type type)
-    {
+            @JsonProperty("type") Type type) {
         this.name = requireNonNull(name, "name is null");
         this.type = requireNonNull(type, "type is null");
     }
 
     @JsonProperty
-    public String getName()
-    {
+    public String getName() {
         return name;
     }
 
     @Override
     @JsonProperty
-    public Type getType()
-    {
+    public Type getType() {
         return type;
     }
 
     @Override
-    public int hashCode()
-    {
+    public int hashCode() {
         return Objects.hash(name, type);
     }
 
     @Override
-    public String toString()
-    {
+    public String toString() {
         return name;
     }
 
     @Override
-    public <R, C> R accept(RowExpressionVisitor<R, C> visitor, C context)
-    {
+    public <R, C> R accept(RowExpressionVisitor<R, C> visitor, C context) {
         return visitor.visitVariableReference(this, context);
     }
 
@@ -81,5 +75,14 @@ public class VariableReferenceExpression
         }
         VariableReferenceExpression other = (VariableReferenceExpression) obj;
         return Objects.equals(this.name, other.name) && Objects.equals(this.type, other.type);
+    }
+
+    @Override
+    public boolean equals2(Object o)
+    {
+        VariableReferenceExpression other = (VariableReferenceExpression) o;
+        String st1 = TableScanNode.getActualColName(other.name);
+        String st2 = TableScanNode.getActualColName(this.name);
+        return st1.equals(st2) && Objects.equals(this.type, other.type);
     }
 }

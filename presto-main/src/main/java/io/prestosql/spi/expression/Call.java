@@ -12,7 +12,6 @@
  * limitations under the License.
  */
 package io.prestosql.spi.expression;
-
 import com.sun.tracing.dtrace.FunctionName;
 import io.prestosql.spi.type.Type;
 

@@ -24,7 +24,9 @@ import io.prestosql.spi.plan.Symbol;
 
 import javax.annotation.concurrent.Immutable;
 
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import static java.util.Objects.requireNonNull;
 
@@ -35,6 +37,8 @@ public class OutputNode
     private final PlanNode source;
     private final List<String> columnNames;
     private final List<Symbol> outputs;
+
+    public Map<String, Symbol> symbolNamesToAbsoluteNames = new HashMap<String, Symbol>();
 
     @JsonCreator
     public OutputNode(@JsonProperty("id") PlanNodeId id,

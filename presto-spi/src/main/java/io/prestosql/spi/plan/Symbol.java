@@ -23,6 +23,9 @@ public class Symbol
 {
     private final String name;
 
+    public String attributeName;
+    public String tableName;
+
     @JsonCreator
     public Symbol(String name)
     {
@@ -30,15 +33,29 @@ public class Symbol
         this.name = name;
     }
 
-    @JsonValue
-    public String getName()
+    /**
+     * relativeName -> user_id_3
+     * table_name -> postgresql.pubic.account
+     * attribute_name -> user_id:integer
+     */
+    public Symbol(String relativeName, String tableName, String attributeName)
     {
+        requireNonNull(relativeName, "relativeName is null");
+        requireNonNull(tableName, "tableName is null");
+        requireNonNull(attributeName, "attributeName is null");
+
+        this.name = relativeName;
+        this.tableName = tableName;
+        this.attributeName = attributeName;
+    }
+
+    @JsonValue
+    public String getName() {
         return name;
     }
 
     @Override
-    public String toString()
-    {
+    public String toString() {
         return name;
     }
 
@@ -61,15 +78,32 @@ public class Symbol
         return true;
     }
 
-    @Override
-    public int hashCode()
+    public boolean equals2(Object o)
     {
+        if (this == o) {
+            return true;
+        }
+        if (o == null || getClass() != o.getClass()) {
+            return false;
+        }
+
+        Symbol symbol = (Symbol) o;
+        String originalNameOfOther = TableScanNode.getActualColName(symbol.name);
+        String originalNameOfMe = TableScanNode.getActualColName(name);
+
+        if (!originalNameOfMe.equals(originalNameOfOther)) {
+            return false;
+        }
+        return true;
+    }
+
+    @Override
+    public int hashCode() {
         return name.hashCode();
     }
 
     @Override
-    public int compareTo(Symbol o)
-    {
+    public int compareTo(Symbol o) {
         return name.compareTo(o.name);
     }
 }

@@ -28,8 +28,7 @@ import io.prestosql.spi.type.Type;
         @JsonSubTypes.Type(value = InputReferenceExpression.class, name = "input"),
         @JsonSubTypes.Type(value = VariableReferenceExpression.class, name = "variable"),
         @JsonSubTypes.Type(value = ConstantExpression.class, name = "constant")})
-public abstract class RowExpression
-{
+public abstract class RowExpression {
     public abstract Type getType();
 
     @Override
@@ -43,8 +42,11 @@ public abstract class RowExpression
 
     public abstract <R, C> R accept(RowExpressionVisitor<R, C> visitor, C context);
 
-    public boolean absEquals(Object o)
-    {
+    public boolean absEquals(Object o) {
         return false;
+    }
+
+    public boolean equals2(Object o) {
+        return equals(o);
     }
 }

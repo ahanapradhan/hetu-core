@@ -186,4 +186,9 @@ public abstract class InternalPlanVisitor<R, C>
     {
         return visitPlan(node, context);
     }
+
+    public R visitStoreForward(StoreForwardNode node, C context)
+    {
+        return visitPlan(node, context);
+    }
 }

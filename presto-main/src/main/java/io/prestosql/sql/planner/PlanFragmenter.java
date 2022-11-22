@@ -16,6 +16,7 @@ package io.prestosql.sql.planner;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Maps;
+import io.airlift.log.Logger;
 import io.prestosql.Session;
 import io.prestosql.SystemSessionProperties;
 import io.prestosql.cost.StatsAndCosts;
@@ -97,6 +98,8 @@ import static java.util.Objects.requireNonNull;
  */
 public class PlanFragmenter
 {
+    private static final Logger LOG = Logger.get(PlanFragmenter.class);
+
     private static final String TOO_MANY_STAGES_MESSAGE = "" +
             "If the query contains multiple aggregates with DISTINCT over different columns, please set the 'use_mark_distinct' session property to false. " +
             "If the query contains WITH clauses that are referenced more than once, please create temporary table(s) for the queries in those clauses.";
@@ -440,11 +443,14 @@ public class PlanFragmenter
 
             if (planNode instanceof CTEScanNode) {
                 int commonCTERefNum = ((CTEScanNode) planNode).getCommonCTERefNum();
+                LOG.debug("commonCTERefNum = " + commonCTERefNum);
                 if (cteToParentsMap.containsKey(commonCTERefNum)) {
+                    LOG.debug("it is already there..");
                     cteToParentsMap.get(commonCTERefNum).forEach(x -> x.updateConsumerPlan(nodeId));
                     ((CTEScanNode) planNode).updateConsumerPlans(cteToParentsMap.get(commonCTERefNum).get(0).getConsumerPlans());
                 }
                 else {
+                    LOG.debug("not there..");
                     ((CTEScanNode) planNode).updateConsumerPlan(nodeId);
                 }
 

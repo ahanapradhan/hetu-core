@@ -38,6 +38,7 @@ import java.util.Map;
 import java.util.Set;
 
 import static io.prestosql.SystemSessionProperties.isCTEReuseEnabled;
+import static io.prestosql.SystemSessionProperties.isSubplanMergeEnabled;
 import static java.util.Objects.requireNonNull;
 
 /*
@@ -67,7 +68,7 @@ public class PruneCTENodes
         requireNonNull(symbolAllocator, "symbolAllocator is null");
         requireNonNull(idAllocator, "idAllocator is null");
 
-        if (!isCTEReuseEnabled(session)) {
+        if (!isCTEReuseEnabled(session) && !isSubplanMergeEnabled(session)) {
             return plan;
         }
         else {
