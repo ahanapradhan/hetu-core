@@ -18,6 +18,7 @@ import io.airlift.log.Logger;
 import io.prestosql.cost.PlanCostEstimate;
 import io.prestosql.cost.PlanNodeStatsEstimate;
 import io.prestosql.cost.StatsAndCosts;
+import io.prestosql.spi.plan.AggregationNode;
 import io.prestosql.spi.plan.FilterNode;
 import io.prestosql.spi.plan.JoinNode;
 import io.prestosql.spi.plan.PlanNode;
@@ -92,12 +93,14 @@ public class JoinInformationExtractor
         public List<JoinNodeInfo> joinNodesInfo; //to get the join conditions and build the join query graph
         public Map<String, ScanNodeInfo> tableNameToScanNodesInfo; //table name -> TableScanNode or IndexSourceNode
         public Map<String, FilterNodeInfo> tableNameToFilterNodesInfo;
+        public Map<String, AggregateInfo> tableNameToAggregateNodesInfo;
 
         public JoinInformation()
         {
             this.joinNodesInfo = new ArrayList<>();
             this.tableNameToScanNodesInfo = new HashMap<>();
             this.tableNameToFilterNodesInfo = new HashMap<>();
+            this.tableNameToAggregateNodesInfo = new HashMap();
         }
 
         @Override
@@ -147,6 +150,32 @@ public class JoinInformationExtractor
 
             return true;
         }
+    }
+
+    public static class AggregateInfo
+    {
+        private final AggregationNode aggregationNode;
+        private final PlanNodeStatsEstimate planNodeStatsEstimate;
+
+        public AggregateInfo(AggregationNode aggregationNode, PlanNodeStatsEstimate statsEstimate) {
+            this.aggregationNode = aggregationNode;
+            this.planNodeStatsEstimate = statsEstimate;
+        }
+
+        @Override
+        public boolean equals(Object o)
+        {
+            if (this == o) {
+                return true;
+            }
+            if (o == null || getClass() != o.getClass()) {
+                return false;
+            }
+
+            AggregateInfo other = (AggregateInfo) o;
+            return this.aggregationNode.equals2(other.aggregationNode);
+        }
+
     }
 
     public static class JoinNodeInfo

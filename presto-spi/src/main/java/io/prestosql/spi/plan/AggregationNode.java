@@ -282,6 +282,23 @@ public class AggregationNode
         this.finalizeSymbol = finalizeSymbol;
     }
 
+    public boolean equals2(AggregationNode aggregationNode)
+    {
+        if (aggregationNode == null) {
+            return false;
+        }
+
+        boolean b = Objects.equals(this.source, aggregationNode.source)
+                && Objects.equals(this.aggregationType, aggregationNode.aggregationType)
+                && Objects.equals(this.step, aggregationNode.step)
+                && (this.outputs.stream().allMatch(o -> aggregationNode.outputs.contains(o)))
+                && (aggregationNode.outputs.stream().allMatch(o -> this.outputs.contains(o)));
+        for (Map.Entry<Symbol, Aggregation> entry : this.aggregations.entrySet()) {
+            b = b && aggregationNode.aggregations.containsKey(entry.getKey());
+        }
+        return b;
+    }
+
     public static class GroupingSetDescriptor
     {
         private final List<Symbol> groupingKeys;
