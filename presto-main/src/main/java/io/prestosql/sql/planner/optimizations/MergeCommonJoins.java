@@ -10,14 +10,11 @@ import io.prestosql.cost.CostProvider;
 import io.prestosql.cost.StatsAndCosts;
 import io.prestosql.cost.StatsCalculator;
 import io.prestosql.cost.StatsProvider;
-import io.prestosql.execution.CTEcreatorForCommonJoins;
 import io.prestosql.execution.CteNodeRemover;
-import io.prestosql.execution.JoinNodePicker;
+import io.prestosql.execution.HashComputerForPlanTree;
 import io.prestosql.execution.warnings.WarningCollector;
-import io.prestosql.spi.plan.JoinNode;
 import io.prestosql.spi.plan.PlanNode;
 import io.prestosql.spi.plan.PlanNodeIdAllocator;
-import io.prestosql.sql.planner.Plan;
 import io.prestosql.sql.planner.PlanSymbolAllocator;
 import io.prestosql.sql.planner.TypeProvider;
 import io.prestosql.sql.planner.datapath.globalplanner.GlobalPlanner;
@@ -25,7 +22,6 @@ import io.prestosql.sql.planner.datapath.globalplanner.JoinInformationExtractor;
 import org.apache.commons.lang3.time.StopWatch;
 
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.TimeUnit;
@@ -97,6 +93,12 @@ public class MergeCommonJoins implements PlanOptimizer
 
         CteNodeRemover cteRemover = new CteNodeRemover(plan);
         plan = cteRemover.removeCTE();
+
+        HashComputerForPlanTree hashComputer = new HashComputerForPlanTree(plan);
+        hashComputer.computeHash();
+        /**
+         *
+
         JoinNodePicker splitter = new JoinNodePicker(plan);
         List<JoinNode> joinNodes = splitter.splitAtJoins();
         log.debug("number of join rooted trees : " + joinNodes.size());
@@ -114,6 +116,8 @@ public class MergeCommonJoins implements PlanOptimizer
         List<CTEcreatorForCommonJoins.JoinCteNodeInfo> infos = globalPlaner.createOverlapMatches(joinGraphMap);
         CTEcreatorForCommonJoins adder = new CTEcreatorForCommonJoins(plan, idAllocator, infos);
         plan = adder.addCTE();
+
+         */
 
         watch.stop();
         log.debug("total time: " + watch.getTime(TimeUnit.MILLISECONDS) + " ms");

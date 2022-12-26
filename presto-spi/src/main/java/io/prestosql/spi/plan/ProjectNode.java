@@ -39,6 +39,7 @@ public class ProjectNode
     {
         super(id);
 
+        this.NODE_TYPE_NAME = "projectNode";
         requireNonNull(source, "source is null");
         requireNonNull(assignments, "assignments is null");
 

@@ -71,6 +71,8 @@ public class JoinNode
             @JsonProperty("spillable") Optional<Boolean> spillable,
             @JsonProperty("dynamicFilters") Map<String, Symbol> dynamicFilters) {
         super(id);
+        this.NODE_TYPE_NAME = "joinNode";
+
         requireNonNull(type, "type is null");
         requireNonNull(left, "left is null");
         requireNonNull(right, "right is null");

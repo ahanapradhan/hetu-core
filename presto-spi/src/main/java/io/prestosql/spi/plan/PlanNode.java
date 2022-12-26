@@ -28,6 +28,8 @@ import static java.util.Objects.requireNonNull;
 @JsonTypeInfo(use = JsonTypeInfo.Id.MINIMAL_CLASS, property = "@type")
 public abstract class PlanNode
 {
+    protected String NODE_TYPE_NAME = "planNode";
+    protected long HASH = Long.parseLong("0");
     public enum SkipOptRuleLevel
     {
         APPLY_ALL_RULES,                // default behaviour
@@ -82,5 +84,18 @@ public abstract class PlanNode
     public SkipOptRuleLevel getSkipOptRuleLevel()
     {
         return this.skipOptRuleLevel;
+    }
+
+    public long computeHash(Long parentHash)
+    {
+        if (this.HASH == Long.parseLong("0")) {
+            this.HASH = NODE_TYPE_NAME.hashCode() * parentHash;
+        }
+        return this.HASH;
+    }
+
+    public String getNodeName()
+    {
+        return NODE_TYPE_NAME;
     }
 }

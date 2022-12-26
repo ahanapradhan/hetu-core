@@ -67,6 +67,7 @@ public class AggregationNode
             @JsonProperty("finalizeSymbol") Optional<Symbol> finalizeSymbol)
     {
         super(id);
+        this.NODE_TYPE_NAME = "aggregationNode";
 
         this.source = source;
         this.aggregations = ImmutableMap.copyOf(requireNonNull(aggregations, "aggregations is null"));

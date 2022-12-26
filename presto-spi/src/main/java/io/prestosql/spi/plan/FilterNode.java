@@ -26,6 +26,8 @@ import java.util.List;
 @Immutable
 public class FilterNode
         extends PlanNode {
+
+    private static final String FILTER = "filterNode";
     private final PlanNode source;
     private final RowExpression predicate;
 
@@ -35,6 +37,7 @@ public class FilterNode
                       @JsonProperty("predicate") RowExpression predicate) {
         super(id);
 
+        this.NODE_TYPE_NAME = FILTER;
         this.source = source;
         this.predicate = predicate;
     }
@@ -79,5 +82,16 @@ public class FilterNode
         }
 
         return returnValue;
+    }
+
+    @Override
+    public long computeHash(Long parentHash)
+    {
+        if (this.NODE_TYPE_NAME.equals(FILTER)) {
+            StringBuilder sb = new StringBuilder();
+            sb.append(predicate.hashCode());
+            this.NODE_TYPE_NAME = this.NODE_TYPE_NAME + sb;
+        }
+        return super.computeHash(parentHash);
     }
 }

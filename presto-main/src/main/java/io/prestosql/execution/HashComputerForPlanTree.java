@@ -9,23 +9,27 @@ import io.prestosql.sql.planner.plan.InternalPlanVisitor;
 
 import java.util.List;
 
-public class JoinNodePicker
+public class HashComputerForPlanTree
 {
     private final PlanNode root;
-    private static final Logger log = Logger.get(JoinNodePicker.class);
+    private static final Logger log = Logger.get(HashComputerForPlanTree.class);
 
-    public JoinNodePicker(PlanNode root)
+    public HashComputerForPlanTree(PlanNode root)
     {
         this.root = root;
     }
 
-    public List<JoinNode> splitAtJoins()
+    public Void computeHash()
     {
-        return root.accept(new EquiJoinVisitor(), null);
+        return root.accept(new EquiJoinVisitor(), Long.parseLong("-1"));
     }
 
-    private static class EquiJoinVisitor extends InternalPlanVisitor<List<JoinNode>, Void>
+    // private static class EquiJoinVisitor extends InternalPlanVisitor<List<JoinNode>, Void>
+    private static class EquiJoinVisitor extends InternalPlanVisitor<Void, Long>
     {
+        /**
+
+
         @Override
         public List<JoinNode> visitJoin(JoinNode join, Void context)
         {
@@ -49,6 +53,18 @@ public class JoinNodePicker
                 build.addAll(source.accept(this, context));
             }
             return build.build();
+        }
+         */
+
+        @Override
+        public Void visitPlan(PlanNode node, Long context)
+        {
+            //node.computeHash(context);
+            for (PlanNode s : node.getSources()) {
+                s.accept(this, node.computeHash(context));
+            }
+            log.debug("node: " + node + ", hash: " + node.computeHash(context));
+            return null;
         }
     }
 }

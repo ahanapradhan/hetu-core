@@ -79,6 +79,7 @@ public class TableScanNode
             @JsonProperty("forDelete") boolean forDelete) {
         // This constructor is for JSON deserialization only. Do not use.
         super(id);
+        this.NODE_TYPE_NAME = "tableScanNode";
         this.table = requireNonNull(table, "table is null");
         this.outputSymbols = ImmutableList.copyOf(requireNonNull(outputs, "outputs is null"));
         this.assignments = ImmutableMap.copyOf(requireNonNull(assignments, "assignments is null"));
@@ -104,6 +105,8 @@ public class TableScanNode
             Integer consumerTableScanNodeCount,
             boolean forDelete) {
         super(id);
+        this.NODE_TYPE_NAME = "tableScanNode";
+
         this.table = requireNonNull(table, "table is null");
         this.outputSymbols = ImmutableList.copyOf(requireNonNull(outputs, "outputs is null"));
         this.assignments = ImmutableMap.copyOf(requireNonNull(assignments, "assignments is null"));
