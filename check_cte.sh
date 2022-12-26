@@ -1,11 +1,12 @@
 #!/bin/bash
-rm /home/root1/Documents/bqo-based-cte/data/cte_added_for.txt
+prefix=/home/root1/openLookEng/cte_bqo/bqo-based-cte
+rm $prefix/data/cte_added_for.txt
 
-for i in $(ls ~/Documents/bqo-based-cte/queries/tpcds-master/)
+for i in $(ls $prefix/queries/test)
 do
-        echo $i >> /home/root1/Documents/bqo-based-cte/data/cte_added_for.txt
+        echo $i >> $prefix/data/cte_added_for.txt
 	cd $OLK_BIN
-        java -jar hetu-cli-1.9.0-SNAPSHOT-executable.jar --server localhost:8080 -f /home/root1/Documents/bqo-based-cte/queries/tpcds-master/$i > ~/Documents/bqo-based-cte/$i.txt
+        java -jar /home/root1/openLookEng/cte_bqo/hetu-core/presto-cli/target/hetu-cli-1.9.0-SNAPSHOT-executable.jar --server localhost:8081 -f $prefix/queries/test/$i > $prefix/$i.txt
 done
 
 
