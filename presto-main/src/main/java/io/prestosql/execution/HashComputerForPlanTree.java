@@ -1,13 +1,9 @@
 package io.prestosql.execution;
 
 
-import com.google.common.collect.ImmutableList;
 import io.airlift.log.Logger;
-import io.prestosql.spi.plan.JoinNode;
 import io.prestosql.spi.plan.PlanNode;
 import io.prestosql.sql.planner.plan.InternalPlanVisitor;
-
-import java.util.List;
 
 public class HashComputerForPlanTree
 {
@@ -21,7 +17,7 @@ public class HashComputerForPlanTree
 
     public Void computeHash()
     {
-        return root.accept(new EquiJoinVisitor(), Long.parseLong("-1"));
+        return root.accept(new EquiJoinVisitor(), null);
     }
 
     // private static class EquiJoinVisitor extends InternalPlanVisitor<List<JoinNode>, Void>
@@ -61,9 +57,9 @@ public class HashComputerForPlanTree
         {
             //node.computeHash(context);
             for (PlanNode s : node.getSources()) {
-                s.accept(this, node.computeHash(context));
+                s.accept(this, context);
             }
-            log.debug("node: " + node + ", hash: " + node.computeHash(context));
+            log.debug("node: " + node + ", hash: " + node.getHash());
             return null;
         }
     }

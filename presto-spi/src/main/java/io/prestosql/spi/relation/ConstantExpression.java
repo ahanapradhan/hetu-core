@@ -76,6 +76,16 @@ public final class ConstantExpression
     }
 
     @Override
+    public int computeHash()
+    {
+        if (value instanceof Slice) {
+            Slice s = (Slice) value;
+            return Objects.hash(s.getAddress(), s.getBytes(), type);
+        }
+        return hashCode();
+    }
+
+    @Override
     public boolean equals(Object obj) {
         if (this == obj) {
             return true;

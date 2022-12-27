@@ -24,7 +24,6 @@ import io.prestosql.spi.predicate.TupleDomain;
 import io.prestosql.spi.relation.RowExpression;
 
 import javax.annotation.concurrent.Immutable;
-
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -40,6 +39,8 @@ import static java.util.Objects.requireNonNull;
 @Immutable
 public class TableScanNode
         extends PlanNode {
+
+    private static final String TABLESCAN = "tableScanNode";
     private final TableHandle table;
     private final List<Symbol> outputSymbols;
     private final Map<Symbol, ColumnHandle> assignments;
@@ -79,7 +80,7 @@ public class TableScanNode
             @JsonProperty("forDelete") boolean forDelete) {
         // This constructor is for JSON deserialization only. Do not use.
         super(id);
-        this.NODE_TYPE_NAME = "tableScanNode";
+        this.NODE_TYPE_NAME = TABLESCAN;
         this.table = requireNonNull(table, "table is null");
         this.outputSymbols = ImmutableList.copyOf(requireNonNull(outputs, "outputs is null"));
         this.assignments = ImmutableMap.copyOf(requireNonNull(assignments, "assignments is null"));
@@ -105,7 +106,7 @@ public class TableScanNode
             Integer consumerTableScanNodeCount,
             boolean forDelete) {
         super(id);
-        this.NODE_TYPE_NAME = "tableScanNode";
+        this.NODE_TYPE_NAME = TABLESCAN;
 
         this.table = requireNonNull(table, "table is null");
         this.outputSymbols = ImmutableList.copyOf(requireNonNull(outputs, "outputs is null"));
@@ -216,6 +217,18 @@ public class TableScanNode
                 .add("reuseTableScanMappingId", reuseTableScanMappingId)
                 .add("consumerTableScanNodeCount", consumerTableScanNodeCount)
                 .toString();
+    }
+
+    @Override
+    protected void fillItemsForHash()
+    {
+        itemsForHash.add(table.getFullyQualifiedName());
+        for (Symbol symbol : outputSymbols) {
+            ColumnHandle col = assignments.get(symbol);
+            itemsForHash.add(col.getColumnName());
+        }
+        itemsForHash.add(filterExpr);
+        predicate.ifPresent(itemsForHash::add);
     }
 
     @Override

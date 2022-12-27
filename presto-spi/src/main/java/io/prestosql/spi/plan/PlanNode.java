@@ -17,9 +17,14 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Streams;
+import io.airlift.log.Logger;
+import io.prestosql.spi.CustomHashComputable;
+import io.prestosql.spi.relation.RowExpression;
 
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
+import java.util.Objects;
 import java.util.stream.Collectors;
 
 import static io.prestosql.spi.plan.PlanNode.SkipOptRuleLevel.APPLY_ALL_RULES;
@@ -28,8 +33,12 @@ import static java.util.Objects.requireNonNull;
 @JsonTypeInfo(use = JsonTypeInfo.Id.MINIMAL_CLASS, property = "@type")
 public abstract class PlanNode
 {
+    private static final Logger log = Logger.get(PlanNode.class);
+
+    protected List<Object> itemsForHash = new ArrayList<>();
     protected String NODE_TYPE_NAME = "planNode";
     protected long HASH = Long.parseLong("0");
+
     public enum SkipOptRuleLevel
     {
         APPLY_ALL_RULES,                // default behaviour
@@ -86,16 +95,36 @@ public abstract class PlanNode
         return this.skipOptRuleLevel;
     }
 
-    public long computeHash(Long parentHash)
+    public long getHash()
     {
         if (this.HASH == Long.parseLong("0")) {
-            this.HASH = NODE_TYPE_NAME.hashCode() * parentHash;
+            List<Object> hashes = new ArrayList<>();
+            for (Object o : getItemsForHash()) {
+                if (o != null) {
+                    if (o instanceof CustomHashComputable) {
+                        hashes.add(((CustomHashComputable) o).computeHash());
+                    }
+                    else {
+                        hashes.add(o.hashCode());
+                    }
+                }
+            }
+            this.HASH = Objects.hash(hashes);
         }
         return this.HASH;
     }
 
-    public String getNodeName()
+    protected void fillItemsForHash()
     {
-        return NODE_TYPE_NAME;
+        itemsForHash.add(NODE_TYPE_NAME);
+    }
+
+    public List<Object> getItemsForHash()
+    {
+        if (itemsForHash.isEmpty()) {
+            fillItemsForHash();
+            log.debug(String.valueOf(itemsForHash));
+        }
+        return itemsForHash;
     }
 }

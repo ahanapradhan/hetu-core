@@ -82,4 +82,11 @@ public class ProjectNode
     {
         return new ProjectNode(getId(), Iterables.getOnlyElement(newChildren), assignments);
     }
+
+    @Override
+    protected void fillItemsForHash()
+    {
+        itemsForHash.add(assignments);
+        itemsForHash.addAll(source.getItemsForHash());
+    }
 }

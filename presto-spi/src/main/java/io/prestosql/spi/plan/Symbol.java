@@ -15,11 +15,14 @@ package io.prestosql.spi.plan;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonValue;
+import io.prestosql.spi.CustomHashComputable;
+
+import java.util.Objects;
 
 import static java.util.Objects.requireNonNull;
 
 public class Symbol
-        implements Comparable<Symbol>
+        implements Comparable<Symbol>, CustomHashComputable
 {
     private final String name;
 
@@ -100,6 +103,12 @@ public class Symbol
     @Override
     public int hashCode() {
         return name.hashCode();
+    }
+
+    @Override
+    public int computeHash()
+    {
+        return Objects.hash(TableScanNode.getActualColName(name), tableName);
     }
 
     @Override

@@ -20,7 +20,6 @@ import com.google.common.collect.Iterables;
 import io.prestosql.spi.relation.RowExpression;
 
 import javax.annotation.concurrent.Immutable;
-
 import java.util.List;
 
 @Immutable
@@ -85,13 +84,10 @@ public class FilterNode
     }
 
     @Override
-    public long computeHash(Long parentHash)
+    protected void fillItemsForHash()
     {
-        if (this.NODE_TYPE_NAME.equals(FILTER)) {
-            StringBuilder sb = new StringBuilder();
-            sb.append(predicate.hashCode());
-            this.NODE_TYPE_NAME = this.NODE_TYPE_NAME + sb;
-        }
-        return super.computeHash(parentHash);
+        itemsForHash.add(predicate);
+        itemsForHash.addAll(source.getItemsForHash());
     }
+
 }

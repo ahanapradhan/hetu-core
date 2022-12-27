@@ -18,6 +18,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
+import io.prestosql.spi.CustomHashComputable;
 import io.prestosql.spi.relation.RowExpression;
 
 import javax.annotation.concurrent.Immutable;
@@ -296,7 +297,9 @@ public class JoinNode
         return criteria.isEmpty() && !filter.isPresent() && type == Type.INNER;
     }
 
-    public static class EquiJoinClause {
+    public static class EquiJoinClause
+        implements CustomHashComputable
+    {
         private final Symbol left;
         private final Symbol right;
 
@@ -377,5 +380,22 @@ public class JoinNode
         public String toString() {
             return format("%s = %s", left, right);
         }
+
+        @Override
+        public int computeHash() {
+            return Objects.hash(left.computeHash(), right.computeHash());
+        }
     }
+
+    @Override
+    public void fillItemsForHash()
+    {
+        itemsForHash.add(type);
+        itemsForHash.addAll(left.getItemsForHash());
+        itemsForHash.addAll(right.getItemsForHash());
+        itemsForHash.addAll(getCriteria());
+        itemsForHash.addAll(outputSymbols);
+        filter.ifPresent(itemsForHash::add);
+    }
+
 }
