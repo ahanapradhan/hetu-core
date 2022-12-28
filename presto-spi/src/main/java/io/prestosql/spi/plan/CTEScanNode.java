@@ -51,6 +51,7 @@ public class CTEScanNode
             @JsonProperty("commonCTERefNum") Integer commonCTERefNum)
     {
         super(id);
+        this.NODE_TYPE_NAME = "CTEScanNode";
         this.outputSymbols = new ArrayList<>(outputs);
         this.predicate = predicate;
         this.source = source;

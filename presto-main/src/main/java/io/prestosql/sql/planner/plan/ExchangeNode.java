@@ -32,6 +32,7 @@ import javax.annotation.concurrent.Immutable;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 import static com.google.common.base.Preconditions.checkArgument;
 import static io.prestosql.sql.planner.SystemPartitioningHandle.FIXED_ARBITRARY_DISTRIBUTION;
@@ -86,6 +87,7 @@ public class ExchangeNode
             @JsonProperty("aggregationType") AggregationNode.AggregationType aggregationType)
     {
         super(id);
+        this.NODE_TYPE_NAME = "exchangeNode";
         List<PlanNode> sourceList = sources;
         // CTEScanNode adds one exchange node on top of it,
         // so if upper node going to have another ExchangeNode then we should omit previous one.
@@ -317,5 +319,18 @@ public class ExchangeNode
     public PlanNode replaceChildren(List<PlanNode> newChildren)
     {
         return new ExchangeNode(getId(), type, scope, partitioningScheme, newChildren, inputs, orderingScheme, aggregationType);
+    }
+
+    @Override
+    public void fillItemsForHash()
+    {
+        itemsForHash.add(type);
+        itemsForHash.add(scope);
+        itemsForHash.addAll(inputs.stream()
+                .flatMap(List::stream)
+                .collect(Collectors.toList()));
+        for (PlanNode source : sources) {
+            itemsForHash.addAll(source.getItemsForHash());
+        }
     }
 }

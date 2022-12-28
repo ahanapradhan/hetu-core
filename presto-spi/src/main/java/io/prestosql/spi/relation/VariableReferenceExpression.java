@@ -55,6 +55,11 @@ public class VariableReferenceExpression
     }
 
     @Override
+    public int computeHash() {
+        return Objects.hash(TableScanNode.getActualColName(name), type);
+    }
+
+    @Override
     public String toString() {
         return name;
     }

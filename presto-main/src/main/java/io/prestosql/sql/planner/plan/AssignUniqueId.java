@@ -39,6 +39,7 @@ public class AssignUniqueId
             @JsonProperty("idColumn") Symbol unique)
     {
         super(id);
+        this.NODE_TYPE_NAME = "assignUniqueId";
         this.source = requireNonNull(source, "source is null");
         this.idColumn = requireNonNull(unique, "idColumn is null");
     }

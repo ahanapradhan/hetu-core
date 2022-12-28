@@ -5,6 +5,14 @@ import io.airlift.log.Logger;
 import io.prestosql.spi.plan.PlanNode;
 import io.prestosql.sql.planner.plan.InternalPlanVisitor;
 
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+
 public class HashComputerForPlanTree
 {
     private final PlanNode root;
@@ -15,14 +23,17 @@ public class HashComputerForPlanTree
         this.root = root;
     }
 
-    public Void computeHash()
+    public Map<Integer, Set<PlanNode>> computeHash()
     {
-        return root.accept(new EquiJoinVisitor(), null);
+        EquiJoinVisitor visitor = new EquiJoinVisitor();
+        root.accept(visitor, null);
+        return visitor.hashCounter;
     }
 
     // private static class EquiJoinVisitor extends InternalPlanVisitor<List<JoinNode>, Void>
     private static class EquiJoinVisitor extends InternalPlanVisitor<Void, Long>
     {
+        Map<Integer, Set<PlanNode>> hashCounter = new HashMap<>();
         /**
 
 
@@ -59,7 +70,11 @@ public class HashComputerForPlanTree
             for (PlanNode s : node.getSources()) {
                 s.accept(this, context);
             }
-            log.debug("node: " + node + ", hash: " + node.getHash());
+            int hash = node.getHash();
+            log.debug("node: " + node + ", hash: " + hash);
+            Set<PlanNode> nodes = hashCounter.containsKey(hash) ? hashCounter.get(hash) : new HashSet<>();
+            nodes.add(node);
+            hashCounter.put(hash, nodes);
             return null;
         }
     }

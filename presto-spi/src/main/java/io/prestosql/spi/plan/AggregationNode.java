@@ -495,14 +495,16 @@ public class AggregationNode
         itemsForHash.add(source.getItemsForHash());
         for (Symbol symbol : outputs) {
             Aggregation agg = aggregations.get(symbol);
-            StringBuilder sb = new StringBuilder();
-            sb.append(agg.functionCall).append(",");
-            sb.append(agg.filter);
-            sb.append(agg.distinct);
-            sb.append(agg.orderingScheme);
-            sb.append(agg.mask);
-            itemsForHash.add(sb.toString());
-            itemsForHash.addAll(agg.arguments);
+            if (agg != null) {
+                StringBuilder sb = new StringBuilder();
+                sb.append(agg.functionCall).append(",");
+                sb.append(agg.filter);
+                sb.append(agg.distinct);
+                sb.append(agg.orderingScheme);
+                sb.append(agg.mask);
+                itemsForHash.add(sb.toString());
+                itemsForHash.addAll(agg.arguments);
+            }
         }
         itemsForHash.add(step);
     }

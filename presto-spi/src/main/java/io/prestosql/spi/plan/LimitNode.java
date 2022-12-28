@@ -49,6 +49,7 @@ public class LimitNode
             @JsonProperty("partial") boolean partial)
     {
         super(id);
+        this.NODE_TYPE_NAME = "limitNode";
         this.partial = partial;
 
         requireNonNull(source, "source is null");

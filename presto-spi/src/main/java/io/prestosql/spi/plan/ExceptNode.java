@@ -31,6 +31,7 @@ public class ExceptNode
             @JsonProperty("outputs") List<Symbol> outputs)
     {
         super(id, sources, outputToInputs, outputs);
+        this.NODE_TYPE_NAME = "exceptNode";
     }
 
     @Override

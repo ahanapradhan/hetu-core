@@ -21,6 +21,7 @@ import io.prestosql.spi.type.Type;
 
 import javax.annotation.concurrent.Immutable;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 
@@ -85,6 +86,16 @@ public class SpecialForm
     @Override
     public int hashCode() {
         return Objects.hash(form, returnType, arguments);
+    }
+
+    @Override
+    public int computeHash()
+    {
+        List<Integer> args = new ArrayList<>();
+        for (RowExpression row : arguments) {
+            args.add(row.computeHash());
+        }
+        return Objects.hash(form, returnType, args);
     }
 
     @Override

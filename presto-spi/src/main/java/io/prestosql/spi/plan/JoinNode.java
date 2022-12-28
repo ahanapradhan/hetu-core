@@ -32,6 +32,7 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
 
+import static com.google.common.base.MoreObjects.toStringHelper;
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static io.prestosql.spi.plan.JoinNode.DistributionType.PARTITIONED;
@@ -385,6 +386,17 @@ public class JoinNode
         public int computeHash() {
             return Objects.hash(left.computeHash(), right.computeHash());
         }
+    }
+
+    @Override
+    public String toString() {
+        return toStringHelper(this)
+                .add("criteria", criteria)
+                .add("outputSymbols", outputSymbols)
+                .add("left", left)
+                .add("right", right)
+                .add("type", type)
+                .toString();
     }
 
     @Override

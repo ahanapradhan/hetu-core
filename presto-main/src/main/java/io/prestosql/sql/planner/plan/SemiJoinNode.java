@@ -55,6 +55,7 @@ public class SemiJoinNode
             @JsonProperty("dynamicFilterId") Optional<String> dynamicFilterId)
     {
         super(id);
+        this.NODE_TYPE_NAME = "semiJoinNode";
         this.source = requireNonNull(source, "source is null");
         this.filteringSource = requireNonNull(filteringSource, "filteringSource is null");
         this.sourceJoinSymbol = requireNonNull(sourceJoinSymbol, "sourceJoinSymbol is null");
@@ -180,5 +181,15 @@ public class SemiJoinNode
                 filteringSourceHashSymbol,
                 Optional.of(distributionType),
                 dynamicFilterId);
+    }
+
+    @Override
+    public void fillItemsForHash()
+    {
+        itemsForHash.addAll(source.getItemsForHash());
+        itemsForHash.addAll(filteringSource.getItemsForHash());
+        itemsForHash.add(semiJoinOutput);
+        itemsForHash.add(filteringSourceJoinSymbol);
+        itemsForHash.add(sourceJoinSymbol);
     }
 }

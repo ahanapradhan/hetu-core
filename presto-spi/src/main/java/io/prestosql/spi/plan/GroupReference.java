@@ -26,6 +26,7 @@ public class GroupReference
     public GroupReference(PlanNodeId id, int groupId, List<Symbol> outputs)
     {
         super(id);
+        this.NODE_TYPE_NAME = "groupReference";
         this.groupId = groupId;
         this.outputs = ImmutableList.copyOf(outputs);
     }

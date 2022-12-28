@@ -40,7 +40,7 @@ public class SortNode
             @JsonProperty("partial") boolean partial)
     {
         super(id);
-
+        this.NODE_TYPE_NAME = "sortNode";
         requireNonNull(source, "source is null");
         requireNonNull(orderingScheme, "orderingScheme is null");
 
@@ -89,5 +89,13 @@ public class SortNode
     public PlanNode replaceChildren(List<PlanNode> newChildren)
     {
         return new SortNode(getId(), Iterables.getOnlyElement(newChildren), orderingScheme, partial);
+    }
+
+    @Override
+    public void fillItemsForHash()
+    {
+        itemsForHash.addAll(source.getItemsForHash());
+        itemsForHash.add(orderingScheme);
+        itemsForHash.add(partial);
     }
 }

@@ -33,6 +33,7 @@ public class UnionNode
             @JsonProperty("outputs") List<Symbol> outputs)
     {
         super(id, sources, outputToInputs, outputs);
+        this.NODE_TYPE_NAME = "unionNode";
     }
 
     @Override

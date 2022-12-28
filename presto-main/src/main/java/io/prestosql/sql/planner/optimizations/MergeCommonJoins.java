@@ -21,11 +21,15 @@ import io.prestosql.sql.planner.datapath.globalplanner.GlobalPlanner;
 import io.prestosql.sql.planner.datapath.globalplanner.JoinInformationExtractor;
 import org.apache.commons.lang3.time.StopWatch;
 
+import java.util.Collections;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.stream.Collectors;
 
 public class MergeCommonJoins implements PlanOptimizer
 {
@@ -95,7 +99,19 @@ public class MergeCommonJoins implements PlanOptimizer
         plan = cteRemover.removeCTE();
 
         HashComputerForPlanTree hashComputer = new HashComputerForPlanTree(plan);
-        hashComputer.computeHash();
+        Map<Integer, Set<PlanNode>> hashCounter = hashComputer.computeHash();
+
+        for (Map.Entry<Integer, Set<PlanNode>> map : hashCounter.entrySet()) {
+            Set<PlanNode> dup = map.getValue();
+            if (dup.size() > 1) {
+                log.debug("duplicates:");
+                for (PlanNode node : dup) {
+                    log.debug(node.toString());
+                }
+                log.debug("-------------------");
+            }
+        }
+
         /**
          *
 

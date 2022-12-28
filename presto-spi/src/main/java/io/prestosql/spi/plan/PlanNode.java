@@ -19,7 +19,6 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Streams;
 import io.airlift.log.Logger;
 import io.prestosql.spi.CustomHashComputable;
-import io.prestosql.spi.relation.RowExpression;
 
 import java.util.ArrayList;
 import java.util.Collection;
@@ -95,7 +94,7 @@ public abstract class PlanNode
         return this.skipOptRuleLevel;
     }
 
-    public long getHash()
+    public int getHash()
     {
         if (this.HASH == Long.parseLong("0")) {
             List<Object> hashes = new ArrayList<>();
@@ -111,12 +110,15 @@ public abstract class PlanNode
             }
             this.HASH = Objects.hash(hashes);
         }
-        return this.HASH;
+        return (int) this.HASH;
     }
 
     protected void fillItemsForHash()
     {
         itemsForHash.add(NODE_TYPE_NAME);
+        for (PlanNode source : getSources()) {
+            itemsForHash.addAll(source.getItemsForHash());
+        }
     }
 
     public List<Object> getItemsForHash()

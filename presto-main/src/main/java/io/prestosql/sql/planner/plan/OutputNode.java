@@ -48,6 +48,7 @@ public class OutputNode
     {
         super(id);
 
+        this.NODE_TYPE_NAME = "outputNode";
         requireNonNull(source, "source is null");
         requireNonNull(columnNames, "columnNames is null");
         Preconditions.checkArgument(columnNames.size() == outputs.size(), "columnNames and assignments sizes don't match");
@@ -92,5 +93,12 @@ public class OutputNode
     public PlanNode replaceChildren(List<PlanNode> newChildren)
     {
         return new OutputNode(getId(), Iterables.getOnlyElement(newChildren), columnNames, outputs);
+    }
+
+    @Override
+    public void fillItemsForHash()
+    {
+        itemsForHash.addAll(source.getItemsForHash());
+        itemsForHash.addAll(outputs);
     }
 }
