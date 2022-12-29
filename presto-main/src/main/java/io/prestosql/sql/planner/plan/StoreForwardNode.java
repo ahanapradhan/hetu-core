@@ -34,6 +34,7 @@ public class StoreForwardNode
     {
         super(id);
 
+        this.NODE_TYPE_NAME = "StoreForwardNode";
         requireNonNull(source, "source is null");
 
         this.source = source;

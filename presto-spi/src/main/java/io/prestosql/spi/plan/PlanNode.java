@@ -79,6 +79,13 @@ public abstract class PlanNode
 
     public abstract PlanNode replaceChildren(List<PlanNode> newChildren);
 
+    public PlanNode replaceChildrenWithHash(List<PlanNode> newChildren)
+    {
+        PlanNode node = replaceChildren(newChildren);
+        node.HASH = HASH;
+        return node;
+    }
+
     public <R, C> R accept(PlanVisitor<R, C> visitor, C context)
     {
         return visitor.visitPlan(this, context);

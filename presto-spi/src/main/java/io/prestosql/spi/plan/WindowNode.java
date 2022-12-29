@@ -60,7 +60,7 @@ public class WindowNode
             @JsonProperty("preSortedOrderPrefix") int preSortedOrderPrefix)
     {
         super(id);
-
+        this.NODE_TYPE_NAME = "windowNode";
         requireNonNull(source, "source is null");
         requireNonNull(specification, "specification is null");
         requireNonNull(windowFunctions, "windowFunctions is null");

@@ -60,6 +60,7 @@ public class GroupIdNode
             @JsonProperty("groupIdSymbol") Symbol groupIdSymbol)
     {
         super(id);
+        this.NODE_TYPE_NAME = "groupIdNode";
         this.source = requireNonNull(source);
         this.groupingSets = listOfListsCopy(requireNonNull(groupingSets, "groupingSets is null"));
         this.groupingColumns = ImmutableMap.copyOf(requireNonNull(groupingColumns));

@@ -107,6 +107,7 @@ public class LateralJoinNode
             @JsonProperty("originSubquery") Node originSubquery)
     {
         super(id);
+        this.NODE_TYPE_NAME = "lateralJoinNode";
         requireNonNull(input, "input is null");
         requireNonNull(subquery, "right is null");
         requireNonNull(correlation, "correlation is null");

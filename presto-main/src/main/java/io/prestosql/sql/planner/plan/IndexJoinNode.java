@@ -50,6 +50,7 @@ public class IndexJoinNode
             @JsonProperty("indexHashSymbol") Optional<Symbol> indexHashSymbol)
     {
         super(id);
+        this.NODE_TYPE_NAME = "indexJoinNode";
         this.type = requireNonNull(type, "type is null");
         this.probeSource = requireNonNull(probeSource, "probeSource is null");
         this.indexSource = requireNonNull(indexSource, "indexSource is null");

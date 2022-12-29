@@ -57,6 +57,7 @@ public final class TopNRankingNumberNode
     {
         super(id);
 
+        this.NODE_TYPE_NAME = "topNRankingNumberNode";
         requireNonNull(source, "source is null");
         requireNonNull(specification, "specification is null");
         checkArgument(specification.getOrderingScheme().isPresent(), "specification orderingScheme is absent");

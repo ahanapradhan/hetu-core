@@ -153,7 +153,7 @@ import io.prestosql.sql.planner.optimizations.HashGenerationOptimizer;
 import io.prestosql.sql.planner.optimizations.ImplementIntersectAndExceptAsUnion;
 import io.prestosql.sql.planner.optimizations.IndexJoinOptimizer;
 import io.prestosql.sql.planner.optimizations.LimitPushDown;
-import io.prestosql.sql.planner.optimizations.MergeCommonJoins;
+import io.prestosql.sql.planner.optimizations.MergeCommonSubPlans;
 import io.prestosql.sql.planner.optimizations.MetadataQueryOptimizer;
 import io.prestosql.sql.planner.optimizations.OptimizeAggregationOverJoin;
 import io.prestosql.sql.planner.optimizations.OptimizeMixedDistinctAggregations;
@@ -618,7 +618,7 @@ public class PlanOptimizers
                             ImmutableSet.of(new PushTableWriteThroughUnion()))); // Must run before AddExchanges
         }
 
-        builder.add(new MergeCommonJoins(statsCalculator, estimatedExchangesCostCalculator),
+        builder.add(new MergeCommonSubPlans(),
                 new IterativeOptimizer(
                         ruleStats,
                         statsCalculator,

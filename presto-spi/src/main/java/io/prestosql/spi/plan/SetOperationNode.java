@@ -48,6 +48,8 @@ public abstract class SetOperationNode
     {
         super(id);
 
+        this.NODE_TYPE_NAME = "setOperationNode";
+
         requireNonNull(sources, "sources is null");
         checkArgument(!sources.isEmpty(), "Must have at least one source");
         requireNonNull(outputToInputs, "outputToInputs is null");

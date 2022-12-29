@@ -95,7 +95,7 @@ public class SpatialJoinNode
             @JsonProperty("kdbTree") Optional<String> kdbTree)
     {
         super(id);
-
+        this.NODE_TYPE_NAME = "spatialJoinNode";
         this.type = requireNonNull(type, "type is null");
         this.left = requireNonNull(left, "left is null");
         this.right = requireNonNull(right, "right is null");
