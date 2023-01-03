@@ -1,6 +1,5 @@
 package io.prestosql.sql.planner.optimizations;
 
-import com.google.common.collect.TreeTraverser;
 import io.airlift.log.Logger;
 import io.prestosql.Session;
 import io.prestosql.SystemSessionProperties;
@@ -10,20 +9,21 @@ import io.prestosql.execution.warnings.WarningCollector;
 import io.prestosql.spi.plan.CTEScanNode;
 import io.prestosql.spi.plan.PlanNode;
 import io.prestosql.spi.plan.PlanNodeIdAllocator;
+import io.prestosql.spi.plan.TableScanNode;
 import io.prestosql.sql.planner.PlanSymbolAllocator;
 import io.prestosql.sql.planner.TypeProvider;
 import io.prestosql.sql.planner.plan.InternalPlanVisitor;
 import org.apache.commons.lang3.time.StopWatch;
 
 import java.util.ArrayList;
-import java.util.Collection;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.Random;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
-import java.util.stream.Collectors;
 
 public class MergeCommonSubPlans implements PlanOptimizer {
     private static final Logger log = Logger.get(MergeCommonSubPlans.class);
@@ -60,101 +60,161 @@ public class MergeCommonSubPlans implements PlanOptimizer {
      * BFS order traversal and introduce CTE nodes
      */
     private PlanNode introduceCTEs(PlanNode root, PlanNodeIdAllocator idAllocator, HashComputerForPlanTree hashCounter) {
-        TopDownBFSTraverserForAddCTE traverser = new TopDownBFSTraverserForAddCTE(root, hashCounter, idAllocator);
+        TopDownTraverserForAddCTE traverser = new TopDownTraverserForAddCTE(root, hashCounter, idAllocator);
         traverser.topDownCTEAdd();
         return traverser.root;
     }
 
 
-    private static class TopDownBFSTraverserForAddCTE {
+    private static class TopDownTraverserForAddCTE {
+        private static int CTE_COUNTER = 0;
+        private static final String CTE_PREFIX = "$CTE_Node_";
         private final HashComputerForPlanTree hashCounter;
         private PlanNode root;
         private final PlanNodeIdAllocator idAllocator;
 
-        public TopDownBFSTraverserForAddCTE(PlanNode root, HashComputerForPlanTree hashCounter, PlanNodeIdAllocator idAllocator) {
+        public TopDownTraverserForAddCTE(PlanNode root, HashComputerForPlanTree hashCounter, PlanNodeIdAllocator idAllocator) {
             this.hashCounter = hashCounter;
             this.root = root;
             this.idAllocator = idAllocator;
         }
 
-        private PlanNode addCTENode(int key, List<PlanNode> nodes, PlanNode root) {
-            CTENodeAdder cteAdder = new CTENodeAdder(key, nodes, idAllocator);
-            return root.accept(cteAdder, null);
+        private static String getUniqueCtePrefix() {
+            return CTE_PREFIX + CTE_COUNTER++;
         }
 
-        public void topDownCTEAdd()
-        {
-            Set<Integer> pastKeys = new HashSet<>();
-            HashComputerForPlanTree.HashStats hashes = hashCounter.collectHash(this.root);
-            Set<Integer> probablyCteKeys = new HashSet<>();
-            for (Integer key : hashes.hashCounter.keySet()) {
-                if (hashes.hashCounter.get(key) > 1) {
-                    probablyCteKeys.add(key);
-                }
-            }
-
-            TreeTraverser<PlanNode> traverser = TreeTraverser.using(n -> n.getSources());
-            for (PlanNode node : traverser.breadthFirstTraversal(this.root)) {
-                log.debug("visiting node: " + node);
-                Integer key = node.getHash();
-                if (probablyCteKeys.contains(key) && !pastKeys.contains(key)) {
-                    log.debug(" should be a CTE");
-                    this.root = addCTENode(key, (List<PlanNode>) hashes.hashKeyToParentsMap.get(key), this.root);
-                    log.debug("added CTE for hash key " + key);
-                }
-                pastKeys.add(key);
-            }
-        }
-    }
-
-
-    private static class CTENodeAdder extends InternalPlanVisitor<PlanNode, Void> {
-        private final int childHash;
-        private final List<PlanNode> parents;
-        private final String cteRefName;
-        private static int uniq = 0;
-        private static final String CTE_PREFIX = "$CTE_Node_";
-        private final PlanNodeIdAllocator idAllocator;
-        private final int commonCteRefNum;
-
-        public CTENodeAdder(int childHash, Collection<PlanNode> parents, PlanNodeIdAllocator idAllocator) {
-            this.childHash = childHash;
-            this.parents = (List<PlanNode>) parents;
-            this.cteRefName = "\"" + CTE_PREFIX + uniq++ + "\"";
-            this.idAllocator = idAllocator;
-            this.commonCteRefNum = getRandInt();
-        }
-
-        private int getRandInt() {
+        private static int getNextCommonCteRefNum() {
             Random rand = new Random();
             return rand.nextInt();
         }
 
+        public void topDownCTEAdd() {
+            Map<Integer, String> ctePrefixMap = new HashMap<>();
+            Map<Integer, Integer> cteCommonRefNumMap = new HashMap<>();
+            HashComputerForPlanTree.HashStats hashes = hashCounter.collectHash(this.root);
+
+            for (Integer key : hashes.hashCounter.keySet()) {
+                if (hashes.hashCounter.get(key) > 1) {
+                    ctePrefixMap.put(key, getUniqueCtePrefix());
+                    cteCommonRefNumMap.put(key, getNextCommonCteRefNum());
+                }
+            }
+
+            ctePrefixMap.keySet().stream().forEach(key -> log.debug(key + ": " + ctePrefixMap.get(key)));
+
+            CTENodeAdder cteAdder = new CTENodeAdder(idAllocator, ctePrefixMap, cteCommonRefNumMap);
+            this.root = cteAdder.visitPlan(this.root, null);
+        }
+    }
+
+    private static class CTENodeAdder extends InternalPlanVisitor<PlanNode, Void> {
+
+        private final PlanNodeIdAllocator idAllocator;
+        private final Map<Integer, String> ctePrifxMap;
+        private final Map<Integer, Integer> commonCteRefNum;
+
+        public CTENodeAdder(PlanNodeIdAllocator idAllocator, Map<Integer, String> ctePrefixMap, Map<Integer, Integer> cteCommonRefNumMap) {
+            this.idAllocator = idAllocator;
+            this.commonCteRefNum = cteCommonRefNumMap;
+            this.ctePrifxMap = ctePrefixMap;
+        }
+
+
         @Override
         public PlanNode visitPlan(PlanNode node, Void context) {
-            if (this.parents.contains(node)) {
-                Set<PlanNode> ctes = new HashSet<>();
-                Set<PlanNode> matches = node.getSources().stream().filter(s -> (s.getHash() == this.childHash)).collect(Collectors.toSet());
-
-                for (PlanNode child : matches) {
-                    PlanNode cte = new CTEScanNode(idAllocator.getNextId(), child,
-                            child.getOutputSymbols(), Optional.empty(), cteRefName, new HashSet<>(), this.commonCteRefNum);
-                    //  log.debug("cte node " + cteRefName + " got added");
-                    ctes.add(cte);
+            List<PlanNode> reWrittenSources = new ArrayList<>();
+            for (PlanNode source : node.getSources()) {
+                source = source.accept(this, null);
+                Integer hash = source.getHash();
+                if (ctePrifxMap.containsKey(hash)) {
+                    String ctePrefix = ctePrifxMap.get(hash);
+                    int commonRefNum = commonCteRefNum.get(hash);
+                    source = source.accept(new RedundantCTERemover(), null);
+                    PlanNode parentCte = new CTEScanNode(idAllocator.getNextId(), source, source.getOutputSymbols(), Optional.empty(), ctePrefix, new HashSet<>(), commonRefNum);
+                    log.debug("cte node created with name " + ctePrefix + ", commonrefNum: " + commonRefNum);
+                    reWrittenSources.add(parentCte);
+                } else {
+                    reWrittenSources.add(source);
                 }
-                List<PlanNode> children = new ArrayList<>();
-                children.addAll(node.getSources());
-                children.removeAll(matches);
-                children.addAll(ctes);
-                node = node.replaceChildrenWithHash(children);
-            } else {
-                List<PlanNode> newSources = new ArrayList<>();
-                for (PlanNode src : node.getSources()) {
-                    newSources.add(src.accept(this, null));
-                }
-                node = node.replaceChildrenWithHash(newSources);
+            }
+            if (!reWrittenSources.isEmpty()) {
+                log.debug("cte node to be added after " + node);
+                node = node.replaceChildrenWithHash(reWrittenSources);
             }
             return node;
+        }
+
+    }
+
+    private static class RedundantCTERemover extends InternalPlanVisitor<PlanNode, Void> {
+
+        @Override
+        public PlanNode visitPlan(PlanNode node, Void context) {
+            if (node.getSources().isEmpty()) {
+                return node;
+            }
+            if (node.getSources().size() > 1) {
+                Set<Set<String>> names = new HashSet<>();
+                for (PlanNode src : node.getSources()) {
+                    Set<String> cteNames = src.accept(new CTENameCollector(), null);
+                    names.add(cteNames);
+                }
+                if (hasDuplicate(names)) {
+                    return node;
+                }
+            }
+
+            List<PlanNode> reWrittenSources = new ArrayList<>();
+
+            for (PlanNode source : node.getSources()) {
+                if (source instanceof CTEScanNode && isCTEAboveNonScan((CTEScanNode) source)) {
+                    PlanNode child = ((CTEScanNode) source).getSource();
+                    reWrittenSources.add(child);
+                } else {
+                    reWrittenSources.add(source.accept(this, null));
+                }
+            }
+            return node.replaceChildren(reWrittenSources);
+        }
+
+        private boolean hasDuplicate(Set<Set<String>> names)
+        {
+            boolean flag = false;
+            int ctx = 0, cty;
+            for (Set<String> ctex : names) {
+                cty = 0;
+                for (Set<String> ctey: names) {
+                    if (ctx != cty) {
+                        Set<String> copy = new HashSet<>(ctex);
+                        copy.removeAll(ctey);
+                        flag = flag || (copy.size() != ctex.size());
+                    }
+                    cty++;
+                }
+                ctx++;
+            }
+            return flag;
+        }
+
+        private boolean isCTEAboveNonScan(CTEScanNode cte)
+        {
+            PlanNode scanNode = cte.getSource();
+            return scanNode instanceof TableScanNode;
+        }
+    }
+
+    private static class CTENameCollector extends InternalPlanVisitor<Set<String>, Void> {
+
+        @Override
+        public Set<String> visitPlan(PlanNode node, Void context) {
+            Set<String> names = new HashSet<>();
+            if (node instanceof CTEScanNode) {
+                names.add(((CTEScanNode) node).getCteRefName());
+            }
+            for (PlanNode source : node.getSources()) {
+                names.addAll(source.accept(this, null));
+            }
+            return names;
         }
     }
 }

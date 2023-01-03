@@ -38,6 +38,7 @@ public class NodeRepresentation
     private final Optional<PlanNodeStats> stats;
     private final List<PlanNodeStatsEstimate> estimatedStats;
     private final List<PlanCostEstimate> estimatedCost;
+    private final int hash;
 
     private final StringBuilder details = new StringBuilder();
 
@@ -51,7 +52,8 @@ public class NodeRepresentation
             List<PlanNodeStatsEstimate> estimatedStats,
             List<PlanCostEstimate> estimatedCost,
             List<PlanNodeId> children,
-            List<PlanFragmentId> remoteSources)
+            List<PlanFragmentId> remoteSources,
+            int hash)
     {
         this.id = requireNonNull(id, "id is null");
         this.name = requireNonNull(name, "name is null");
@@ -63,6 +65,7 @@ public class NodeRepresentation
         this.estimatedCost = requireNonNull(estimatedCost, "estimatedCost is null");
         this.children = requireNonNull(children, "children is null");
         this.remoteSources = requireNonNull(remoteSources, "remoteSources is null");
+        this.hash = hash;
 
         checkArgument(estimatedCost.size() == estimatedStats.size(), "size of cost and stats list does not match");
     }
@@ -136,6 +139,10 @@ public class NodeRepresentation
     public List<PlanCostEstimate> getEstimatedCost()
     {
         return estimatedCost;
+    }
+
+    public int getHash() {
+        return hash;
     }
 
     public static class TypedSymbol
