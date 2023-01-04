@@ -81,13 +81,4 @@ public class VariableReferenceExpression
         VariableReferenceExpression other = (VariableReferenceExpression) obj;
         return Objects.equals(this.name, other.name) && Objects.equals(this.type, other.type);
     }
-
-    @Override
-    public boolean equals2(Object o)
-    {
-        VariableReferenceExpression other = (VariableReferenceExpression) o;
-        String st1 = TableScanNode.getActualColName(other.name);
-        String st2 = TableScanNode.getActualColName(this.name);
-        return st1.equals(st2) && Objects.equals(this.type, other.type);
-    }
 }

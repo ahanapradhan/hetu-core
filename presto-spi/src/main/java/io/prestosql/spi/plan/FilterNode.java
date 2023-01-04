@@ -87,7 +87,7 @@ public class FilterNode
     protected void fillItemsForHash()
     {
         itemsForHash.add(predicate);
-        itemsForHash.addAll(source.getItemsForHash());
+        super.fillItemsForHash();
     }
 
 }

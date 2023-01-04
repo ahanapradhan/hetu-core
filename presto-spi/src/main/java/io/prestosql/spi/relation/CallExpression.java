@@ -17,10 +17,12 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Joiner;
 import com.google.common.collect.ImmutableList;
+import io.prestosql.spi.CustomHashComputable;
 import io.prestosql.spi.function.FunctionHandle;
 import io.prestosql.spi.function.OperatorType;
 import io.prestosql.spi.type.Type;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 import java.util.Objects;
@@ -29,7 +31,7 @@ import java.util.Optional;
 import static java.util.Objects.requireNonNull;
 
 public final class CallExpression
-        extends RowExpression
+        extends RowExpression implements CustomHashComputable
 {
     private final String displayName;
     private final FunctionHandle functionHandle;
@@ -114,22 +116,14 @@ public final class CallExpression
     }
 
     @Override
-    public boolean equals2(Object o)
+    public int computeHash()
     {
-        if (this == o) {
-            return true;
+        List<Object> args = new ArrayList<>();
+        for (RowExpression rexp : arguments) {
+            args.add(rexp.computeHash());
         }
-        if (o == null || getClass() != o.getClass()) {
-            return false;
-        }
-        CallExpression other = (CallExpression) o;
-        boolean b = Objects.equals(this.functionHandle, other.functionHandle);
-        for (int i = 0; i < this.arguments.size(); i++) {
-            RowExpression one = this.arguments.get(i);
-            RowExpression two = other.arguments.get(i);
-            b = b && one.equals2(two);
-        }
-        return b;
+        args.add(functionHandle);
+        return Objects.hash(args);
     }
 
     @Override

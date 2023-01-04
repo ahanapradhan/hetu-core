@@ -119,23 +119,4 @@ public class SpecialForm
         BIND,
         BETWEEN_AND,
     }
-
-    @Override
-    public boolean absEquals(Object o) {
-        SpecialForm that = (SpecialForm) o;
-        boolean b = form == that.form &&
-                Objects.equals(returnType, that.returnType);
-
-        if (arguments.size() != that.arguments.size()) {
-            return false;
-        }
-
-        for (int i = 0; i < arguments.size(); i++) {
-            RowExpression one = arguments.get(i);
-            RowExpression other = that.arguments.get(i);
-            b = b && one.equals2(other);
-        }
-
-        return b;
-    }
 }

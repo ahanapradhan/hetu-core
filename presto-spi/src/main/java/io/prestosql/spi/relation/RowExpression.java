@@ -29,7 +29,8 @@ import io.prestosql.spi.type.Type;
         @JsonSubTypes.Type(value = InputReferenceExpression.class, name = "input"),
         @JsonSubTypes.Type(value = VariableReferenceExpression.class, name = "variable"),
         @JsonSubTypes.Type(value = ConstantExpression.class, name = "constant")})
-public abstract class RowExpression implements CustomHashComputable {
+public abstract class RowExpression implements CustomHashComputable
+{
     public abstract Type getType();
 
     @Override
@@ -51,9 +52,5 @@ public abstract class RowExpression implements CustomHashComputable {
 
     public boolean absEquals(Object o) {
         return false;
-    }
-
-    public boolean equals2(Object o) {
-        return equals(o);
     }
 }

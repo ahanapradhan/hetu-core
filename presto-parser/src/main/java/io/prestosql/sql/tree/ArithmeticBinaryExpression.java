@@ -22,6 +22,12 @@ import java.util.Optional;
 public class ArithmeticBinaryExpression
         extends Expression
 {
+    @Override
+    public int computeHash()
+    {
+        return Objects.hash(operator, left.computeHash(), right.computeHash());
+    }
+
     public enum Operator
     {
         ADD("+"),

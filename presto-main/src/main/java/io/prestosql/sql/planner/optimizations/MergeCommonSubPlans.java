@@ -14,6 +14,7 @@ import io.prestosql.sql.planner.PlanSymbolAllocator;
 import io.prestosql.sql.planner.TypeProvider;
 import io.prestosql.sql.planner.plan.InternalPlanVisitor;
 import org.apache.commons.lang3.time.StopWatch;
+import org.jetbrains.annotations.Nullable;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -102,7 +103,7 @@ public class MergeCommonSubPlans implements PlanOptimizer {
 
             ctePrefixMap.keySet().stream().forEach(key -> log.debug(key + ": " + ctePrefixMap.get(key)));
 
-            CTENodeAdder cteAdder = new CTENodeAdder(idAllocator, ctePrefixMap, cteCommonRefNumMap);
+            CTENodeAdder cteAdder = new CTENodeAdder(idAllocator, ctePrefixMap, cteCommonRefNumMap, hashes);
             this.root = cteAdder.visitPlan(this.root, null);
         }
     }
@@ -112,11 +113,13 @@ public class MergeCommonSubPlans implements PlanOptimizer {
         private final PlanNodeIdAllocator idAllocator;
         private final Map<Integer, String> ctePrifxMap;
         private final Map<Integer, Integer> commonCteRefNum;
+        private final HashComputerForPlanTree.HashStats hashStats;
 
-        public CTENodeAdder(PlanNodeIdAllocator idAllocator, Map<Integer, String> ctePrefixMap, Map<Integer, Integer> cteCommonRefNumMap) {
+        public CTENodeAdder(PlanNodeIdAllocator idAllocator, Map<Integer, String> ctePrefixMap, Map<Integer, Integer> cteCommonRefNumMap, HashComputerForPlanTree.HashStats stats) {
             this.idAllocator = idAllocator;
             this.commonCteRefNum = cteCommonRefNumMap;
             this.ctePrifxMap = ctePrefixMap;
+            this.hashStats = stats;
         }
 
 
@@ -129,7 +132,7 @@ public class MergeCommonSubPlans implements PlanOptimizer {
                 if (ctePrifxMap.containsKey(hash)) {
                     String ctePrefix = ctePrifxMap.get(hash);
                     int commonRefNum = commonCteRefNum.get(hash);
-                    source = source.accept(new RedundantCTERemover(), null);
+                    source = source.accept(new RedundantCTERemover(hashStats, ctePrifxMap), null);
                     PlanNode parentCte = new CTEScanNode(idAllocator.getNextId(), source, source.getOutputSymbols(), Optional.empty(), ctePrefix, new HashSet<>(), commonRefNum);
                     log.debug("cte node created with name " + ctePrefix + ", commonrefNum: " + commonRefNum);
                     reWrittenSources.add(parentCte);
@@ -146,28 +149,39 @@ public class MergeCommonSubPlans implements PlanOptimizer {
 
     }
 
-    private static class RedundantCTERemover extends InternalPlanVisitor<PlanNode, Void> {
+    private static class RedundantCTERemover extends InternalPlanVisitor<PlanNode, Void>
+    {
+        private final HashComputerForPlanTree.HashStats hashStats;
+        private final Map<Integer, String> ctePrifxMap;
+        private int lastCTEfreq;
+
+        public RedundantCTERemover(HashComputerForPlanTree.HashStats hashStats, Map<Integer, String> ctePrifxMap)
+        {
+            this.hashStats = hashStats;
+            this.ctePrifxMap = ctePrifxMap;
+        }
 
         @Override
-        public PlanNode visitPlan(PlanNode node, Void context) {
+        public PlanNode visitPlan(PlanNode node, Void context)
+        {
+            if (node instanceof CTEScanNode) {
+                int hash = ((CTEScanNode) node).getSource().getHash();
+                lastCTEfreq = this.hashStats.hashCounter.get(hash);
+            }
             if (node.getSources().isEmpty()) {
                 return node;
             }
-            if (node.getSources().size() > 1) {
-                Set<Set<String>> names = new HashSet<>();
-                for (PlanNode src : node.getSources()) {
-                    Set<String> cteNames = src.accept(new CTENameCollector(), null);
-                    names.add(cteNames);
-                }
-                if (hasDuplicate(names)) {
-                    return node;
-                }
+
+            PlanNode node1 = handlePlanBranches(node);
+            if (node1 != null) {
+                return node1;
             }
 
             List<PlanNode> reWrittenSources = new ArrayList<>();
 
             for (PlanNode source : node.getSources()) {
-                if (source instanceof CTEScanNode && isCTEAboveNonScan((CTEScanNode) source)) {
+                if (source instanceof CTEScanNode
+                        && (isCTEAboveNonScan((CTEScanNode) source) || !isCTEAboveReusedScanNode((CTEScanNode) source))) {
                     PlanNode child = ((CTEScanNode) source).getSource();
                     reWrittenSources.add(child);
                 } else {
@@ -177,7 +191,30 @@ public class MergeCommonSubPlans implements PlanOptimizer {
             return node.replaceChildren(reWrittenSources);
         }
 
-        private boolean hasDuplicate(Set<Set<String>> names)
+        private boolean isCTEAboveReusedScanNode(CTEScanNode node)
+        {
+            PlanNode scanNode = node.getSource();
+            int scanFreq = this.hashStats.hashCounter.get(scanNode.getHash());
+            return  (scanNode instanceof TableScanNode) && (scanFreq > lastCTEfreq);
+        }
+
+        @Nullable
+        private PlanNode handlePlanBranches(PlanNode node)
+        {
+            if (node.getSources().size() > 1) { // e.g. join node
+                Set<Set<String>> names = new HashSet<>();
+                for (PlanNode src : node.getSources()) {
+                    Set<String> cteNames = src.accept(new CTENameCollector(), null);
+                    names.add(cteNames);
+                }
+                if (hasOverLap(names)) {
+                    return node;
+                }
+            }
+            return null;
+        }
+
+        private boolean hasOverLap(Set<Set<String>> names)
         {
             boolean flag = false;
             int ctx = 0, cty;

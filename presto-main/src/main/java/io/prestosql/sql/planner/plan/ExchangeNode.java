@@ -329,8 +329,6 @@ public class ExchangeNode
         itemsForHash.addAll(inputs.stream()
                 .flatMap(List::stream)
                 .collect(Collectors.toList()));
-        for (PlanNode source : sources) {
-            itemsForHash.addAll(source.getItemsForHash());
-        }
+        super.fillItemsForHash();
     }
 }

@@ -27,6 +27,7 @@ import javax.annotation.concurrent.Immutable;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -492,8 +493,10 @@ public class AggregationNode
     @Override
     public void fillItemsForHash()
     {
-        itemsForHash.add(source.getItemsForHash());
-        for (Symbol symbol : outputs) {
+        //itemsForHash.add(source.getItemsForHash());
+        List<Symbol> otputs = new ArrayList<>(outputs);
+        Collections.sort(otputs);
+        for (Symbol symbol : otputs) {
             Aggregation agg = aggregations.get(symbol);
             if (agg != null) {
                 StringBuilder sb = new StringBuilder();
@@ -503,9 +506,14 @@ public class AggregationNode
                 sb.append(agg.orderingScheme);
                 sb.append(agg.mask);
                 itemsForHash.add(sb.toString());
+
+              /*  List<RowExpression> args = new ArrayList<>(agg.arguments);
+                Collections.sort(args);*/
+
                 itemsForHash.addAll(agg.arguments);
             }
         }
         itemsForHash.add(step);
+        super.fillItemsForHash();
     }
 }

@@ -26,9 +26,11 @@ import io.prestosql.spi.relation.RowExpression;
 import javax.annotation.concurrent.Immutable;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 
 import static com.google.common.base.MoreObjects.toStringHelper;
@@ -223,7 +225,9 @@ public class TableScanNode
     protected void fillItemsForHash()
     {
         itemsForHash.add(table.getFullyQualifiedName());
-        for (Symbol symbol : outputSymbols) {
+        List<Symbol> outputs = new ArrayList<>(outputSymbols);
+        Collections.sort(outputs);
+        for (Symbol symbol : outputs) {
             ColumnHandle col = assignments.get(symbol);
             itemsForHash.add(col.getColumnName());
         }

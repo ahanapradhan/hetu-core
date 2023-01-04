@@ -106,27 +106,4 @@ public final class ConstantExpression
     public boolean absEquals(Object o) {
         return equals(o);
     }
-
-    @Override
-    public boolean equals2(Object o)
-    {
-        if (this == o) {
-            return true;
-        }
-        if (o == null || getClass() != o.getClass()) {
-            return false;
-        }
-
-        ConstantExpression other = (ConstantExpression) o;
-        if (other.value instanceof Slice)
-        {
-            Slice v = (Slice) other.value;
-            Slice u = (Slice) this.value;
-            if (v.getAddress() == u.getAddress() && v.getBytes().length == u.getBytes().length) {
-                return true;
-            }
-            return false;
-        }
-        return equals(o);
-    }
 }

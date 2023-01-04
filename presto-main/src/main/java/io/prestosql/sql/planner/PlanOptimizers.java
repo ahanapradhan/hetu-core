@@ -618,7 +618,7 @@ public class PlanOptimizers
                             ImmutableSet.of(new PushTableWriteThroughUnion()))); // Must run before AddExchanges
         }
 
-        builder.add(new MergeCommonSubPlans(),
+        builder.add(new MergeCommonSubPlans(), new PruneCTENodes(metadata, typeAnalyzer, true),
                 new IterativeOptimizer(
                         ruleStats,
                         statsCalculator,
