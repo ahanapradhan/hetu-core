@@ -287,6 +287,7 @@ import static io.prestosql.SystemSessionProperties.isSpillOrderBy;
 import static io.prestosql.SystemSessionProperties.isSpillReuseExchange;
 import static io.prestosql.SystemSessionProperties.isSpillToHdfsEnabled;
 import static io.prestosql.SystemSessionProperties.isSpillWindowOperator;
+import static io.prestosql.SystemSessionProperties.isSubplanMergeEnabled;
 import static io.prestosql.dynamicfilter.DynamicFilterCacheManager.createCacheKey;
 import static io.prestosql.expressions.LogicalRowExpressions.TRUE_CONSTANT;
 import static io.prestosql.expressions.RowExpressionNodeInliner.replaceExpression;
@@ -1725,7 +1726,7 @@ public class LocalExecutionPlanner
             Optional<DynamicFilters.ExtractResult> extractDynamicFilterResult = filterExpression.map(DynamicFilters::extractDynamicFilters);
 
             List<List<DynamicFilters.Descriptor>> extractDynamicFilterUnionResult;
-            if (isCTEReuseEnabled(session)) {
+            if (isCTEReuseEnabled(session) || isSubplanMergeEnabled(session)) {
                 extractDynamicFilterUnionResult = DynamicFilters.extractDynamicFiltersAsUnion(filterExpression, metadata);
             }
             else {
@@ -1742,7 +1743,7 @@ public class LocalExecutionPlanner
             Supplier<List<Map<ColumnHandle, DynamicFilter>>> dynamicFilterSupplier = getDynamicFilterSupplier(Optional.of(extractDynamicFilterUnionResult), sourceNode, context);
             Optional<DynamicFilterSupplier> dynamicFilter = Optional.empty();
             if ((dynamicFilterSupplier != null && extractDynamicFilterResult.isPresent() && !extractDynamicFilterResult.get().getDynamicConjuncts().isEmpty())
-                    || (dynamicFilterSupplier != null && isCTEReuseEnabled(session) && !extractDynamicFilterUnionResult.isEmpty())) {
+                    || (dynamicFilterSupplier != null && (isCTEReuseEnabled(session) || isSubplanMergeEnabled(session)) && !extractDynamicFilterUnionResult.isEmpty())) {
                 dynamicFilter = Optional.of(new DynamicFilterSupplier(dynamicFilterSupplier, System.currentTimeMillis(), getDynamicFilteringWaitTime(session).toMillis()));
             }
 

@@ -63,6 +63,7 @@ import static com.google.common.collect.Sets.intersection;
 import static io.prestosql.SystemSessionProperties.getDynamicFilteringMaxSize;
 import static io.prestosql.SystemSessionProperties.isCTEReuseEnabled;
 import static io.prestosql.SystemSessionProperties.isOptimizeDynamicFilterGeneration;
+import static io.prestosql.SystemSessionProperties.isSubplanMergeEnabled;
 import static io.prestosql.expressions.LogicalRowExpressions.TRUE_CONSTANT;
 import static io.prestosql.expressions.LogicalRowExpressions.extractAllPredicates;
 import static io.prestosql.expressions.LogicalRowExpressions.extractConjuncts;
@@ -273,7 +274,7 @@ public class RemoveUnsupportedDynamicFilters
                 }
                 // Keep only allowed dynamic filters
                 else {
-                    if (isCTEReuseEnabled(session)) {
+                    if (isCTEReuseEnabled(session) || isSubplanMergeEnabled(session)) {
                         modified = removeDynamicFiltersForCTE(original, allowedDynamicFilterIds, consumedDynamicFilterIds);
                     }
                     else {

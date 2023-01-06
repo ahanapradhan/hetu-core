@@ -103,6 +103,7 @@ import static com.google.common.base.Verify.verify;
 import static com.google.common.collect.Iterables.filter;
 import static io.prestosql.SystemSessionProperties.isCTEReuseEnabled;
 import static io.prestosql.SystemSessionProperties.isEnableDynamicFiltering;
+import static io.prestosql.SystemSessionProperties.isSubplanMergeEnabled;
 import static io.prestosql.expressions.LogicalRowExpressions.FALSE_CONSTANT;
 import static io.prestosql.expressions.LogicalRowExpressions.TRUE_CONSTANT;
 import static io.prestosql.expressions.LogicalRowExpressions.extractAllPredicates;
@@ -1137,7 +1138,7 @@ public class PredicatePushDown
                     .build();
 
             List<RowExpression> disjuncts = extractDisjuncts(inheritedPredicate);
-            if (isCTEReuseEnabled(session) && isUnionofDynamicFilters(inheritedPredicate)) {
+            if ((isCTEReuseEnabled(session) || isSubplanMergeEnabled(session)) && isUnionofDynamicFilters(inheritedPredicate)) {
                 RowExpression combinedLeftPushDownDisjuncts = FALSE_CONSTANT;
                 RowExpression combinedRightPushDownDisjuncts = FALSE_CONSTANT;
                 for (RowExpression disjunct : disjuncts) {

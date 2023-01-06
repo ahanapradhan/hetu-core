@@ -30,6 +30,7 @@ import io.prestosql.sql.planner.PartitioningScheme;
 
 import javax.annotation.concurrent.Immutable;
 
+import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
@@ -326,9 +327,11 @@ public class ExchangeNode
     {
         itemsForHash.add(type);
         itemsForHash.add(scope);
-        itemsForHash.addAll(inputs.stream()
+        List<Symbol> inputSymbols = inputs.stream()
                 .flatMap(List::stream)
-                .collect(Collectors.toList()));
+                .collect(Collectors.toList());
+        Collections.sort(inputSymbols);
+        itemsForHash.addAll(inputSymbols);
         super.fillItemsForHash();
     }
 }

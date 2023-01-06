@@ -28,7 +28,7 @@ public class CteNodeRemover
         {
             List<PlanNode> children = new ArrayList<>();
             for (PlanNode source : node.getSources()) {
-                source.accept(this, context);
+                source = source.accept(this, context);
                 if (source instanceof CTEScanNode) {
                     PlanNode child = ((CTEScanNode) source).getSource();
                     children.add(child);

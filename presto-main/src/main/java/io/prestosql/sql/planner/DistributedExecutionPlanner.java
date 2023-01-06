@@ -104,6 +104,7 @@ import java.util.function.Supplier;
 import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static com.google.common.collect.Iterables.getOnlyElement;
 import static io.prestosql.SystemSessionProperties.isCTEReuseEnabled;
+import static io.prestosql.SystemSessionProperties.isSubplanMergeEnabled;
 import static io.prestosql.spi.connector.ConnectorSplitManager.SplitSchedulingStrategy.GROUPED_SCHEDULING;
 import static io.prestosql.spi.connector.ConnectorSplitManager.SplitSchedulingStrategy.UNGROUPED_SCHEDULING;
 import static io.prestosql.sql.planner.optimizations.PlanNodeSearcher.searchFrom;
@@ -335,7 +336,7 @@ public class DistributedExecutionPlanner
                 boolean partOfReuse)
         {
             List<List<DynamicFilters.Descriptor>> dynamicFilters;
-            if (isCTEReuseEnabled(session)) {
+            if (isCTEReuseEnabled(session) || isSubplanMergeEnabled(session)) {
                 dynamicFilters = DynamicFilters.extractDynamicFiltersAsUnion(filter.map(FilterNode::getPredicate), metadata);
             }
             else {
