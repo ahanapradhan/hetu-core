@@ -17,10 +17,12 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
+import io.airlift.log.Logger;
 
 import javax.annotation.concurrent.Immutable;
 
 import java.util.List;
+import java.util.Objects;
 
 import static java.util.Objects.requireNonNull;
 
@@ -28,6 +30,8 @@ import static java.util.Objects.requireNonNull;
 public class ProjectNode
         extends PlanNode
 {
+   // private static final Logger log = Logger.get(ProjectNode.class);
+
     private final PlanNode source;
     private final Assignments assignments;
 
@@ -86,7 +90,16 @@ public class ProjectNode
     @Override
     protected void fillItemsForHash()
     {
+   //     log.debug(this + " Assignment Hash: " + assignments.computeHash());
         itemsForHash.add(assignments);
-        itemsForHash.addAll(source.getItemsForHash());
+        super.fillItemsForHash();
+       // itemsForHash.addAll(source.getItemsForHash());
     }
+
+  /*  public static void main(String[] argv) {
+        System.out.println(Objects.hash("ahana", "pradhan"));
+        String ahana = "ahana";
+        String pradhan = "pradhan";
+        System.out.println(Objects.hash(ahana, pradhan));
+    }*/
 }

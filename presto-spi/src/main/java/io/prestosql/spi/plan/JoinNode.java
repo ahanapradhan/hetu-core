@@ -403,11 +403,10 @@ public class JoinNode
     public void fillItemsForHash()
     {
         itemsForHash.add(type);
-        itemsForHash.addAll(left.getItemsForHash());
-        itemsForHash.addAll(right.getItemsForHash());
         itemsForHash.addAll(getCriteria());
         itemsForHash.addAll(outputSymbols);
         filter.ifPresent(itemsForHash::add);
+        super.fillItemsForHash();
     }
 
 }

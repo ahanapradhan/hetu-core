@@ -32,7 +32,7 @@ import static java.util.Objects.requireNonNull;
 @JsonTypeInfo(use = JsonTypeInfo.Id.MINIMAL_CLASS, property = "@type")
 public abstract class PlanNode
 {
-    private static final Logger log = Logger.get(PlanNode.class);
+//    private static final Logger log = Logger.get(PlanNode.class);
 
     protected List<Object> itemsForHash = new ArrayList<>();
     protected String NODE_TYPE_NAME = "planNode";
@@ -123,16 +123,18 @@ public abstract class PlanNode
     protected void fillItemsForHash()
     {
         itemsForHash.add(NODE_TYPE_NAME);
+        List<Object> hashOfSources = new ArrayList<>();
         for (PlanNode source : getSources()) {
-            itemsForHash.addAll(source.getItemsForHash());
+            hashOfSources.add(source.getHash());
         }
+        itemsForHash.add(Objects.hashCode(hashOfSources));
     }
 
     public List<Object> getItemsForHash()
     {
         if (itemsForHash.isEmpty()) {
             fillItemsForHash();
-            log.debug(String.valueOf(itemsForHash));
+           // log.debug(String.valueOf(itemsForHash));
         }
         return itemsForHash;
     }

@@ -17,11 +17,15 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Joiner;
 import com.google.common.collect.ImmutableList;
+import io.prestosql.spi.CustomHashComputable;
+import io.prestosql.spi.plan.TableScanNode;
 import io.prestosql.spi.type.FunctionType;
 import io.prestosql.spi.type.Type;
 
 import javax.annotation.concurrent.Immutable;
 
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
 
@@ -30,7 +34,7 @@ import static java.util.Objects.requireNonNull;
 
 @Immutable
 public final class LambdaDefinitionExpression
-        extends RowExpression
+        extends RowExpression implements CustomHashComputable
 {
     private final List<Type> argumentTypes;
     private final List<String> arguments;
@@ -97,6 +101,17 @@ public final class LambdaDefinitionExpression
     public int hashCode()
     {
         return Objects.hash(argumentTypes, arguments, body);
+    }
+
+    @Override
+    public int computeHash()
+    {
+        List<String> args = new ArrayList<>();
+        for (String a : arguments) {
+            args.add(TableScanNode.getActualColName(a));
+        }
+        Collections.sort(args);
+        return Objects.hash(argumentTypes, args, body);
     }
 
     @Override
