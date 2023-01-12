@@ -6,9 +6,12 @@ import io.prestosql.SystemSessionProperties;
 import io.prestosql.execution.CteNodeRemover;
 import io.prestosql.execution.HashComputerForPlanTree;
 import io.prestosql.execution.warnings.WarningCollector;
+import io.prestosql.spi.plan.AggregationNode;
 import io.prestosql.spi.plan.CTEScanNode;
+import io.prestosql.spi.plan.FilterNode;
 import io.prestosql.spi.plan.PlanNode;
 import io.prestosql.spi.plan.PlanNodeIdAllocator;
+import io.prestosql.spi.plan.ProjectNode;
 import io.prestosql.spi.plan.TableScanNode;
 import io.prestosql.sql.planner.PlanSymbolAllocator;
 import io.prestosql.sql.planner.TypeProvider;
@@ -25,8 +28,10 @@ import java.util.Optional;
 import java.util.Random;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.IntStream;
 
-public class MergeCommonSubPlans implements PlanOptimizer {
+public class MergeCommonSubPlans implements PlanOptimizer
+{
     private static final Logger log = Logger.get(MergeCommonSubPlans.class);
 
     @Override

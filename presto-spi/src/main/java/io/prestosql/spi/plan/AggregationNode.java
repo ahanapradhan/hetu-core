@@ -19,6 +19,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
+import io.prestosql.spi.CustomHashComputable;
 import io.prestosql.spi.function.FunctionHandle;
 import io.prestosql.spi.relation.CallExpression;
 import io.prestosql.spi.relation.RowExpression;
@@ -391,7 +392,7 @@ public class AggregationNode
         }
     }
 
-    public static class Aggregation
+    public static class Aggregation implements CustomHashComputable
     {
         private final CallExpression functionCall;
         private final List<RowExpression> arguments;
@@ -482,6 +483,18 @@ public class AggregationNode
         {
             return Objects.hash(functionCall, arguments, distinct, filter, orderingScheme, mask);
         }
+
+        @Override
+        public int computeHash() {
+            List<Object> args = new ArrayList<>();
+            args.add(this.functionCall.getFunctionHandle());
+            //args.addAll(this.arguments);
+            args.add(distinct);
+            filter.ifPresent(args::add);
+            orderingScheme.ifPresent(args::add);
+            mask.ifPresent(args::add);
+            return Objects.hash(args);
+        }
     }
 
     public enum AggregationType
@@ -499,17 +512,7 @@ public class AggregationNode
         for (Symbol symbol : otputs) {
             Aggregation agg = aggregations.get(symbol);
             if (agg != null) {
-                StringBuilder sb = new StringBuilder();
-                sb.append(agg.functionCall).append(",");
-                sb.append(agg.filter);
-                sb.append(agg.distinct);
-                sb.append(agg.orderingScheme);
-                sb.append(agg.mask);
-                itemsForHash.add(sb.toString());
-
-              /*  List<RowExpression> args = new ArrayList<>(agg.arguments);
-                Collections.sort(args);*/
-
+                itemsForHash.add(agg.computeHash());
                 itemsForHash.addAll(agg.arguments);
             }
         }

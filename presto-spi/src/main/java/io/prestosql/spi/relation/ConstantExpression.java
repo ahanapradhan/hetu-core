@@ -80,7 +80,8 @@ public final class ConstantExpression
     {
         if (value instanceof Slice) {
             Slice s = (Slice) value;
-            return Objects.hash(s.getAddress(), s.getBytes(), type);
+            int hash = Objects.hash(s.getAddress(), s.hashCode(0, s.length()), type);
+            return hash;
         }
         return hashCode();
     }

@@ -617,13 +617,7 @@ public class PlanOptimizers
                             estimatedExchangesCostCalculator,
                             ImmutableSet.of(new PushTableWriteThroughUnion()))); // Must run before AddExchanges
         }
-
-        builder.add(new MergeCommonSubPlans(), new PruneCTENodes(metadata, typeAnalyzer, true),
-                new IterativeOptimizer(
-                        ruleStats,
-                        statsCalculator,
-                        estimatedExchangesCostCalculator,
-                        ImmutableSet.of(new AddExchangeAboveCTENode())));
+       // builder.add(new MergeCommonSubPlans(), new PruneCTENodes(metadata, typeAnalyzer, true));
 
         if (!forceSingleNode) {
             builder.add(new StatsRecordingPlanOptimizer(optimizerStats, new AddExchanges(metadata, typeAnalyzer, false)));
@@ -634,6 +628,8 @@ public class PlanOptimizers
                 statsCalculator,
                 estimatedExchangesCostCalculator,
                 ImmutableSet.of(new PushPredicateIntoTableScan(metadata, typeAnalyzer, false)));
+
+        builder.add(new MergeCommonSubPlans(), new PruneCTENodes(metadata, typeAnalyzer, true));
 
         IterativeOptimizer pushdownDeleteRule = new IterativeOptimizer(
                 ruleStats,
@@ -656,6 +652,7 @@ public class PlanOptimizers
         builder.add(new StatsRecordingPlanOptimizer(optimizerStats, new PredicatePushDown(metadata, typeAnalyzer, costCalculationHandle, true, true, true))); // Run predicate push down one more time in case we can leverage new information from layouts' effective predicate
         builder.add(new RemoveUnsupportedDynamicFilters(metadata, statsCalculator));
         builder.add(simplifyRowExpressionOptimizer); // Should be always run after PredicatePushDown
+       // builder.add(new MergeCommonSubPlans(), new PruneCTENodes(metadata, typeAnalyzer, true));
         builder.add(new IterativeOptimizer(
                 ruleStats,
                 statsCalculator,

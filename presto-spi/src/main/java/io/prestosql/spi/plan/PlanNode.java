@@ -108,6 +108,10 @@ public abstract class PlanNode
             for (Object o : getItemsForHash()) {
                 if (o != null) {
                     if (o instanceof CustomHashComputable) {
+                       /* if (this instanceof FilterNode) {
+                            System.out.println(o);
+                            System.out.println(((CustomHashComputable) o).computeHash());
+                        }*/
                         hashes.add(((CustomHashComputable) o).computeHash());
                     }
                     else {
