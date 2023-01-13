@@ -2,8 +2,10 @@ package io.prestosql.sql.planner;
 
 import com.google.common.collect.ImmutableMap;
 import io.prestosql.Session;
+import io.prestosql.SystemSessionProperties;
 import io.prestosql.plugin.tpcds.TpcdsConnectorFactory;
 import io.prestosql.spi.plan.AggregationNode;
+import io.prestosql.spi.plan.CTEScanNode;
 import io.prestosql.spi.plan.FilterNode;
 import io.prestosql.spi.plan.PlanNode;
 import io.prestosql.spi.plan.ProjectNode;
@@ -13,19 +15,26 @@ import io.prestosql.sql.planner.plan.InternalPlanVisitor;
 import io.prestosql.testing.LocalQueryRunner;
 import org.testng.annotations.Test;
 
+import java.util.HashMap;
+import java.util.Map;
 import java.util.stream.IntStream;
 
 import static io.prestosql.testing.TestingSession.testSessionBuilder;
 
 public class TestMergeCommonSubPlans extends BasePlanTest
 {
+    public TestMergeCommonSubPlans(ImmutableMap<String, String> sessionProperties)
+    {
+        super(sessionProperties);
+    }
+
     @Override
     protected LocalQueryRunner createQueryRunner()
     {
         Session.SessionBuilder sessionBuilder = testSessionBuilder()
                 .setCatalog("local")
                 .setSchema("tiny")
-                .setSystemProperty("task_concurrency", "1"); // these tests don't handle exchanges from local parallel
+                .setSystemProperty("task_concurrency", "1");// these tests don't handle exchanges from local parallel
 
         sessionProperties.entrySet().forEach(entry -> sessionBuilder.setSystemProperty(entry.getKey(), entry.getValue()));
 
@@ -37,8 +46,23 @@ public class TestMergeCommonSubPlans extends BasePlanTest
         return localQueryRunner;
     }
 
+    public Map<String, Integer> getCteCounter(String sql)
+    {
+        PlanNode node = plan(sql).getRoot();
+        HashScorePrinter hashCounter = new HashScorePrinter();
+        node.accept(hashCounter, 0);
+        return hashCounter.getCteCounter();
+    }
+
     private static class HashScorePrinter extends InternalPlanVisitor<Void, Integer>
     {
+        private final Map<String, Integer> cteCounter = new HashMap<>();
+
+        public Map<String, Integer> getCteCounter()
+        {
+            return this.cteCounter;
+        }
+
         private String getDetails(PlanNode node)
         {
             String nodeType = node.getClass().toString().replace("class io.prestosql.spi.plan.","").replace("class io.prestosql.sql.planner.plan.","");
@@ -62,12 +86,26 @@ public class TestMergeCommonSubPlans extends BasePlanTest
         @Override
         public Void visitPlan(PlanNode node, Integer context)
         {
+            updateCteCounter(node);
+
             IntStream.range(0, context).boxed().forEach(i -> System.out.print("\t"));
-            System.out.println(getDetails(node) + " " + node.getHash());
+           // System.out.println(getDetails(node) + " " + node.getHash());
             for (PlanNode source : node.getSources()) {
                 source.accept(this, context + 1);
             }
             return null;
+        }
+
+        private void updateCteCounter(PlanNode node) {
+            if (node instanceof CTEScanNode) {
+                String cteName = ((CTEScanNode) node).getCteRefName();
+                if (this.cteCounter.containsKey(cteName)) {
+                    this.cteCounter.put(cteName, cteCounter.get(cteName) + 1);
+                }
+                else {
+                    this.cteCounter.put(cteName, 1);
+                }
+            }
         }
     }
 
