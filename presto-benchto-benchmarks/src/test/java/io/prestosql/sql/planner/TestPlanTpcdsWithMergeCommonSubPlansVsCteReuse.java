@@ -16,14 +16,14 @@ import java.util.Map;
 import static org.testng.Assert.assertTrue;
 import static org.testng.Assert.fail;
 
-public class TestTpcdsWithMergeCommonSubPlansVsCteReuse
+public class TestPlanTpcdsWithMergeCommonSubPlansVsCteReuse
 {
     int pass = 0;
     public static final String TPCDS_QUERY_DIR = "/for_testcase";
     TestMergeCommonSubPlans nativeEngine;
     TestMergeCommonSubPlans newEngine;
 
-    private static final String TEST_QUERY = "WITH best_ss_customer AS " +
+    public static final String TEST_QUERY = "WITH best_ss_customer AS " +
             "(SELECT c_customer_sk, \n" +
             "Sum(ss_quantity * ss_sales_price) ssales \n" +
             "FROM   store_sales, \n" +
@@ -110,7 +110,7 @@ public class TestTpcdsWithMergeCommonSubPlansVsCteReuse
         }
 
         File[] files = new File(resource.getPath()).listFiles();
-        
+
         for (File sqlFile : files) {
             try {
                 System.out.println(sqlFile.getAbsolutePath());
@@ -124,7 +124,7 @@ public class TestTpcdsWithMergeCommonSubPlansVsCteReuse
         }
     }
 
-    public TestTpcdsWithMergeCommonSubPlansVsCteReuse()
+    public TestPlanTpcdsWithMergeCommonSubPlansVsCteReuse()
     {
         nativeEngine = new TestMergeCommonSubPlans(ImmutableMap.of(
                 SystemSessionProperties.SUBPLAN_MERGE_ENABLED, "false",
@@ -136,18 +136,16 @@ public class TestTpcdsWithMergeCommonSubPlansVsCteReuse
 
     private void test_tpcdsPlanTest(String query)
     {
-        try {
-            nativeEngine.initPlanTest();
-            newEngine.initPlanTest();
-        } catch (IOException e) {
-            fail("can't run test...");
-        }
+        startQueryEngines();
 
         Map<String, Integer> nativeCtes = nativeEngine.getCteCounter(query);
         Map<String, Integer> newCtes = newEngine.getCteCounter(query);
 
         boolean countOne = false;
-        if (nativeCtes.keySet().size() > newCtes.keySet().size()) {
+        if (nativeCtes.keySet().size() <= newCtes.keySet().size()) {
+            assertTrue(true);
+        }
+        else {
             System.out.println("native engine");
             for (Map.Entry<String, Integer> e : nativeCtes.entrySet()) {
                 System.out.println(e.getKey() + ":" + e.getValue());
@@ -162,17 +160,32 @@ public class TestTpcdsWithMergeCommonSubPlansVsCteReuse
             }
             assertTrue(countOne);
         }
-        else {
-            assertTrue(true);
-        }
+
         pass++;
 
-        nativeEngine.destroyPlanTest();
-        newEngine.destroyPlanTest();
+        shutdownQueryEngines();
     }
 
     @Test
     public void test_basicPlanCompare()
+    {
+        startQueryEngines();
+
+        Map<String, Integer> nativeCtes = nativeEngine.getCteCounter(TEST_QUERY);
+        Map<String, Integer> newCtes = newEngine.getCteCounter(TEST_QUERY);
+
+        assertTrue(nativeCtes.keySet().size() <= newCtes.keySet().size());
+
+        shutdownQueryEngines();
+    }
+
+    private void shutdownQueryEngines()
+    {
+        nativeEngine.destroyPlanTest();
+        newEngine.destroyPlanTest();
+    }
+
+    private void startQueryEngines()
     {
         try {
             nativeEngine.initPlanTest();
@@ -180,14 +193,6 @@ public class TestTpcdsWithMergeCommonSubPlansVsCteReuse
         } catch (IOException e) {
             fail("can't run test...");
         }
-
-        Map<String, Integer> nativeCtes = nativeEngine.getCteCounter(TEST_QUERY);
-        Map<String, Integer> newCtes = newEngine.getCteCounter(TEST_QUERY);
-
-        assertTrue(nativeCtes.keySet().size() <= newCtes.keySet().size());
-
-        nativeEngine.destroyPlanTest();
-        newEngine.destroyPlanTest();
     }
 
     @Test
@@ -195,5 +200,35 @@ public class TestTpcdsWithMergeCommonSubPlansVsCteReuse
     {
         list();
         System.out.println(pass + " queries pass");
+    }
+
+    /*
+    public static class ExecutionTester extends AbstractTestQueryFramework
+    {
+        protected ExecutionTester(QueryRunnerSupplier supplier)
+        {
+            super(supplier);
+        }
+
+        public void execute(String sql) {
+            assertQuerySucceeds(sql);
+        }
+    }
+
+     */
+
+    @Test
+    public void test_execution()
+    {
+        startQueryEngines();
+     //   ExecutionTester nativeExecutor = new ExecutionTester(() -> nativeEngine.getOwnQueryRunner());
+     //   try {
+       //     nativeExecutor.init();
+            nativeEngine.executeSql(TEST_QUERY);
+     //   } catch (Exception e) {
+       //     e.printStackTrace();
+        //}
+        //nativeEngine.executeSql(TEST_QUERY);
+        shutdownQueryEngines();
     }
 }

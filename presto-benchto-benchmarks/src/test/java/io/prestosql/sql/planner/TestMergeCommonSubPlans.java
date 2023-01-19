@@ -2,7 +2,6 @@ package io.prestosql.sql.planner;
 
 import com.google.common.collect.ImmutableMap;
 import io.prestosql.Session;
-import io.prestosql.SystemSessionProperties;
 import io.prestosql.plugin.tpcds.TpcdsConnectorFactory;
 import io.prestosql.spi.plan.AggregationNode;
 import io.prestosql.spi.plan.CTEScanNode;
@@ -13,6 +12,7 @@ import io.prestosql.spi.plan.TableScanNode;
 import io.prestosql.sql.planner.assertions.BasePlanTest;
 import io.prestosql.sql.planner.plan.InternalPlanVisitor;
 import io.prestosql.testing.LocalQueryRunner;
+import io.prestosql.testing.MaterializedResult;
 import org.testng.annotations.Test;
 
 import java.util.HashMap;
@@ -178,6 +178,11 @@ public class TestMergeCommonSubPlans extends BasePlanTest
         Plan queryPlan = plan(query);
         System.out.println(queryPlan.getRoot());
         queryPlan.getRoot().accept(new HashScorePrinter(), 0);
+    }
+
+    public MaterializedResult executeSql(String sql)
+    {
+        return queryRunner.execute(sql);
     }
 }
 
