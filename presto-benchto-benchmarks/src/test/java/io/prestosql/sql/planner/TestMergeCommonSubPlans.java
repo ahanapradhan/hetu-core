@@ -34,7 +34,8 @@ public class TestMergeCommonSubPlans extends BasePlanTest
         Session.SessionBuilder sessionBuilder = testSessionBuilder()
                 .setCatalog("local")
                 .setSchema("tiny")
-                .setSystemProperty("task_concurrency", "1");// these tests don't handle exchanges from local parallel
+                .setSystemProperty("task_concurrency", "1");
+             //   .setSystemProperty("enable-dynamic-filtering","true");// these tests don't handle exchanges from local parallel
 
         sessionProperties.entrySet().forEach(entry -> sessionBuilder.setSystemProperty(entry.getKey(), entry.getValue()));
 
@@ -89,7 +90,7 @@ public class TestMergeCommonSubPlans extends BasePlanTest
             updateCteCounter(node);
 
             IntStream.range(0, context).boxed().forEach(i -> System.out.print("\t"));
-           // System.out.println(getDetails(node) + " " + node.getHash());
+            System.out.println(getDetails(node) + " " + node.getHash());
             for (PlanNode source : node.getSources()) {
                 source.accept(this, context + 1);
             }

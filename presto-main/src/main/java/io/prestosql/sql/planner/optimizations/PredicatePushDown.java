@@ -20,6 +20,7 @@ import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
 import io.airlift.log.Logger;
 import io.prestosql.Session;
+import io.prestosql.SystemSessionProperties;
 import io.prestosql.cost.CachingCostProvider;
 import io.prestosql.cost.CachingStatsProvider;
 import io.prestosql.cost.CostComparator;
@@ -142,12 +143,14 @@ import static java.util.function.Function.identity;
 public class PredicatePushDown
         implements PlanOptimizer
 {
+    private static final Logger log = Logger.get(PredicatePushDown.class);
+
     private final Metadata metadata;
     private final TypeAnalyzer typeAnalyzer;
     private final CostCalculationHandle costCalculationHandle;
     private final boolean useTableProperties;
     private final boolean dynamicFiltering;
-    private final boolean pushdownForCTE;
+    private boolean pushdownForCTE;
 
     public PredicatePushDown(Metadata metadata, TypeAnalyzer typeAnalyzer, CostCalculationHandle costCalculationHandle, boolean useTableProperties, boolean dynamicFiltering, boolean pushdownForCTE)
     {
@@ -162,6 +165,10 @@ public class PredicatePushDown
     @Override
     public PlanNode optimize(PlanNode plan, Session session, TypeProvider types, PlanSymbolAllocator planSymbolAllocator, PlanNodeIdAllocator idAllocator, WarningCollector warningCollector)
     {
+        if (SystemSessionProperties.isSubplanMergeEnabled(session)) {
+            this.pushdownForCTE = false;
+        }
+
         requireNonNull(plan, "plan is null");
         requireNonNull(session, "session is null");
         requireNonNull(types, "types is null");
@@ -743,6 +750,7 @@ public class PredicatePushDown
                         distributionType,
                         node.isSpillable(),
                         dynamicFilters);
+                log.debug(((JoinNode) output).getCriteria().toString());
             }
 
             if (!postJoinPredicate.equals(TRUE_CONSTANT)) {
@@ -832,6 +840,9 @@ public class PredicatePushDown
                 dynamicFilters = dynamicFiltersBuilder.build();
                 predicates = predicatesBuilder.build();
             }
+            log.debug("predicates:" + predicates.toString());
+            log.debug("dynamicFilters:" + dynamicFilters.toString());
+
             return new DynamicFiltersResult(dynamicFilters, predicates);
         }
 

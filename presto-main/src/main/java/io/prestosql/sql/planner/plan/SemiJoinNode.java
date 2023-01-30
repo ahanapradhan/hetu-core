@@ -186,10 +186,9 @@ public class SemiJoinNode
     @Override
     public void fillItemsForHash()
     {
-        itemsForHash.addAll(source.getItemsForHash());
-        itemsForHash.addAll(filteringSource.getItemsForHash());
         itemsForHash.add(semiJoinOutput);
         itemsForHash.add(filteringSourceJoinSymbol);
         itemsForHash.add(sourceJoinSymbol);
+        super.fillItemsForHash();
     }
 }

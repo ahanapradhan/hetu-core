@@ -51,6 +51,117 @@ public class TestPlanTpcdsWithMergeCommonSubPlansVsCteReuse
             "FROM   best_ss_customer)) \n" +
             "LIMIT 100";
 
+    public static final String TEST_QUERY14B = "WITH cross_items \n" +
+            "     AS (SELECT i_item_sk ss_item_sk \n" +
+            "         FROM   item, \n" +
+            "                (SELECT iss.i_brand_id    brand_id, \n" +
+            "                        iss.i_class_id    class_id, \n" +
+            "                        iss.i_category_id category_id \n" +
+            "                 FROM   store_sales, \n" +
+            "                        item iss, \n" +
+            "                        date_dim d1 \n" +
+            "                 WHERE  ss_item_sk = iss.i_item_sk \n" +
+            "                        AND ss_sold_date_sk = d1.d_date_sk \n" +
+            "                        AND d1.d_year BETWEEN 1999 AND 1999 + 2 \n" +
+            "                 INTERSECT \n" +
+            "                 SELECT ics.i_brand_id, \n" +
+            "                        ics.i_class_id, \n" +
+            "                        ics.i_category_id \n" +
+            "                 FROM   catalog_sales, \n" +
+            "                        item ics, \n" +
+            "                        date_dim d2 \n" +
+            "                 WHERE  cs_item_sk = ics.i_item_sk \n" +
+            "                        AND cs_sold_date_sk = d2.d_date_sk \n" +
+            "                        AND d2.d_year BETWEEN 1999 AND 1999 + 2 \n" +
+            "                 INTERSECT \n" +
+            "                 SELECT iws.i_brand_id, \n" +
+            "                        iws.i_class_id, \n" +
+            "                        iws.i_category_id \n" +
+            "                 FROM   web_sales, \n" +
+            "                        item iws, \n" +
+            "                        date_dim d3 \n" +
+            "                 WHERE  ws_item_sk = iws.i_item_sk \n" +
+            "                        AND ws_sold_date_sk = d3.d_date_sk \n" +
+            "                        AND d3.d_year BETWEEN 1999 AND 1999 + 2) x \n" +
+            "         WHERE  i_brand_id = brand_id \n" +
+            "                AND i_class_id = class_id \n" +
+            "                AND i_category_id = category_id), \n" +
+            "     avg_sales \n" +
+            "     AS (SELECT Avg(quantity * list_price) average_sales \n" +
+            "         FROM   (SELECT ss_quantity   quantity, \n" +
+            "                        ss_list_price list_price \n" +
+            "                 FROM   store_sales, \n" +
+            "                        date_dim \n" +
+            "                 WHERE  ss_sold_date_sk = d_date_sk \n" +
+            "                        AND d_year BETWEEN 1999 AND 1999 + 2 \n" +
+            "                 UNION ALL \n" +
+            "                 SELECT cs_quantity   quantity, \n" +
+            "                        cs_list_price list_price \n" +
+            "                 FROM   catalog_sales, \n" +
+            "                        date_dim \n" +
+            "                 WHERE  cs_sold_date_sk = d_date_sk \n" +
+            "                        AND d_year BETWEEN 1999 AND 1999 + 2 \n" +
+            "                 UNION ALL \n" +
+            "                 SELECT ws_quantity   quantity, \n" +
+            "                        ws_list_price list_price \n" +
+            "                 FROM   web_sales, \n" +
+            "                        date_dim \n" +
+            "                 WHERE  ws_sold_date_sk = d_date_sk \n" +
+            "                        AND d_year BETWEEN 1999 AND 1999 + 2) x) \n" +
+            "SELECT  * \n" +
+            "FROM   (SELECT 'store'                          channel, \n" +
+            "               i_brand_id, \n" +
+            "               i_class_id, \n" +
+            "               i_category_id, \n" +
+            "               Sum(ss_quantity * ss_list_price) sales, \n" +
+            "               Count(*)                         number_sales \n" +
+            "        FROM   store_sales, \n" +
+            "               item, \n" +
+            "               date_dim \n" +
+            "        WHERE  ss_item_sk IN (SELECT ss_item_sk \n" +
+            "                              FROM   cross_items) \n" +
+            "               AND ss_item_sk = i_item_sk \n" +
+            "               AND ss_sold_date_sk = d_date_sk \n" +
+            "               AND d_week_seq = (SELECT d_week_seq \n" +
+            "                                 FROM   date_dim \n" +
+            "                                 WHERE  d_year = 1999 + 1 \n" +
+            "                                        AND d_moy = 12 \n" +
+            "                                        AND d_dom = 25) \n" +
+            "        GROUP  BY i_brand_id, \n" +
+            "                  i_class_id, \n" +
+            "                  i_category_id \n" +
+            "        HAVING Sum(ss_quantity * ss_list_price) > 0)  this_year, \n" +
+            "       (SELECT 'store'                          channel, \n" +
+            "               i_brand_id, \n" +
+            "               i_class_id, \n" +
+            "               i_category_id, \n" +
+            "               Sum(ss_quantity * ss_list_price) sales, \n" +
+            "               Count(*)                         number_sales \n" +
+            "        FROM   store_sales, \n" +
+            "               item, \n" +
+            "               date_dim \n" +
+            "        WHERE  ss_item_sk IN (SELECT ss_item_sk \n" +
+            "                              FROM   cross_items) \n" +
+            "               AND ss_item_sk = i_item_sk \n" +
+            "               AND ss_sold_date_sk = d_date_sk \n" +
+            "               AND d_week_seq = (SELECT d_week_seq \n" +
+            "                                 FROM   date_dim \n" +
+            "                                 WHERE  d_year = 1999 \n" +
+            "                                        AND d_moy = 12 \n" +
+            "                                        AND d_dom = 25) \n" +
+            "        GROUP  BY i_brand_id, \n" +
+            "                  i_class_id, \n" +
+            "                  i_category_id \n" +
+            "        HAVING Sum(ss_quantity * ss_list_price) > 0)  last_year \n" +
+            "WHERE  this_year.i_brand_id = last_year.i_brand_id \n" +
+            "       AND this_year.i_class_id = last_year.i_class_id \n" +
+            "       AND this_year.i_category_id = last_year.i_category_id \n" +
+            "ORDER  BY this_year.channel, \n" +
+            "          this_year.i_brand_id, \n" +
+            "          this_year.i_class_id, \n" +
+            "          this_year.i_category_id\n" +
+            "LIMIT 100";
+
     private List<String> listFilesForFolder(final File folder)
     {
         List<String> queries = new ArrayList<>();
@@ -181,6 +292,19 @@ public class TestPlanTpcdsWithMergeCommonSubPlansVsCteReuse
         shutdownQueryEngines();
     }
 
+    @Test
+    public void test_basicPlanCompare14b()
+    {
+        startQueryEngines();
+
+      //  Map<String, Integer> nativeCtes = nativeEngine.getCteCounter(TEST_QUERY14B);
+        Map<String, Integer> newCtes = newEngine.getCteCounter(TEST_QUERY14B);
+
+      //  assertTrue(nativeCtes.keySet().size() <= newCtes.keySet().size());
+
+        shutdownQueryEngines();
+    }
+
     private void shutdownQueryEngines()
     {
         nativeEngine.destroyPlanTest();
@@ -204,18 +328,4 @@ public class TestPlanTpcdsWithMergeCommonSubPlansVsCteReuse
         System.out.println(pass + " queries pass");
     }
 
-    /*
-    public static class ExecutionTester extends AbstractTestQueryFramework
-    {
-        protected ExecutionTester(QueryRunnerSupplier supplier)
-        {
-            super(supplier);
-        }
-
-        public void execute(String sql) {
-            assertQuerySucceeds(sql);
-        }
-    }
-
-     */
 }
