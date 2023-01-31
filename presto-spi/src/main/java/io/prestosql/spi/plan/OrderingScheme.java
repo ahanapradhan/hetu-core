@@ -18,8 +18,10 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
+import io.prestosql.spi.CustomHashComputable;
 import io.prestosql.spi.block.SortOrder;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -30,6 +32,7 @@ import static com.google.common.collect.ImmutableList.toImmutableList;
 import static java.util.Objects.requireNonNull;
 
 public class OrderingScheme
+    implements CustomHashComputable
 {
     private final List<Symbol> orderBy;
     private final Map<Symbol, SortOrder> orderings;
@@ -97,5 +100,17 @@ public class OrderingScheme
                 .add("orderBy", orderBy)
                 .add("orderings", orderings)
                 .toString();
+    }
+
+    @Override
+    public int computeHash() {
+        List<Object> args = new ArrayList<>();
+        for (Symbol o : orderBy) {
+            args.add(o.computeHash());
+            if (orderings.containsKey(o)) {
+                args.add(orderings.get(o).computeHash());
+            }
+        }
+        return Objects.hash(args);
     }
 }

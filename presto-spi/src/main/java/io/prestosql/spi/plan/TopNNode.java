@@ -123,9 +123,9 @@ public class TopNNode
     @Override
     public void fillItemsForHash()
     {
-        itemsForHash.addAll(source.getItemsForHash());
         itemsForHash.add(count);
         itemsForHash.add(step);
-        itemsForHash.add(orderingScheme);
+        itemsForHash.add(orderingScheme.computeHash());
+        super.fillItemsForHash();
     }
 }

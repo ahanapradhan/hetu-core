@@ -12,7 +12,9 @@ import java.net.URL;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 
+import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertTrue;
 import static org.testng.Assert.fail;
 
@@ -22,6 +24,57 @@ public class TestPlanTpcdsWithMergeCommonSubPlansVsCteReuse
     public static final String TPCDS_QUERY_DIR = "/for_testcase";
     TestMergeCommonSubPlans nativeEngine;
     TestMergeCommonSubPlans newEngine;
+
+    public static final String TEST_QUERY44 = "SELECT asceding.rnk, \n" +
+            "               i1.i_product_name best_performing, \n" +
+            "               i2.i_product_name worst_performing \n" +
+            "FROM  (SELECT * \n" +
+            "       FROM   (SELECT item_sk, \n" +
+            "                      Rank() \n" +
+            "                        OVER ( \n" +
+            "                          ORDER BY rank_col ASC) rnk \n" +
+            "               FROM   (SELECT ss_item_sk         item_sk, \n" +
+            "                              Avg(ss_net_profit) rank_col \n" +
+            "                       FROM   store_sales ss1 \n" +
+            "                       WHERE  ss_store_sk = 4 \n" +
+            "                       GROUP  BY ss_item_sk \n" +
+            "                       HAVING Avg(ss_net_profit) > 0.9 * \n" +
+            "                              (SELECT Avg(ss_net_profit) \n" +
+            "                                      rank_col \n" +
+            "                               FROM   store_sales \n" +
+            "                               WHERE  ss_store_sk = 4 \n" +
+            "                                      AND ss_cdemo_sk IS \n" +
+            "                                          NULL \n" +
+            "                               GROUP  BY ss_store_sk))V1) \n" +
+            "              V11 \n" +
+            "       WHERE  rnk < 11) asceding, \n" +
+            "      (SELECT * \n" +
+            "       FROM   (SELECT item_sk, \n" +
+            "                      Rank() \n" +
+            "                        OVER ( \n" +
+            "                          ORDER BY rank_col DESC) rnk \n" +
+            "               FROM   (SELECT ss_item_sk         item_sk, \n" +
+            "                              Avg(ss_net_profit) rank_col \n" +
+            "                       FROM   store_sales ss1 \n" +
+            "                       WHERE  ss_store_sk = 4 \n" +
+            "                       GROUP  BY ss_item_sk \n" +
+            "                       HAVING Avg(ss_net_profit) > 0.9 * \n" +
+            "                              (SELECT Avg(ss_net_profit) \n" +
+            "                                      rank_col \n" +
+            "                               FROM   store_sales \n" +
+            "                               WHERE  ss_store_sk = 4 \n" +
+            "                                      AND ss_cdemo_sk IS \n" +
+            "                                          NULL \n" +
+            "                               GROUP  BY ss_store_sk))V2) \n" +
+            "              V21 \n" +
+            "       WHERE  rnk < 11) descending, \n" +
+            "      item i1, \n" +
+            "      item i2 \n" +
+            "WHERE  asceding.rnk = descending.rnk \n" +
+            "       AND i1.i_item_sk = asceding.item_sk \n" +
+            "       AND i2.i_item_sk = descending.item_sk \n" +
+            "ORDER  BY asceding.rnk\n" +
+            "LIMIT 100";
 
     public static final String TEST_QUERY = "WITH best_ss_customer AS " +
             "(SELECT c_customer_sk, \n" +
@@ -243,6 +296,20 @@ public class TestPlanTpcdsWithMergeCommonSubPlansVsCteReuse
         newEngine = new TestMergeCommonSubPlans(ImmutableMap.of(
                 SystemSessionProperties.SUBPLAN_MERGE_ENABLED, "true",
                 SystemSessionProperties.CTE_REUSE_ENABLED, "false"));
+    }
+
+    @Test
+    public void identifyDifferencePoint()
+    {
+        System.out.println(Objects.hash("true", "false") + " " + Objects.hash("false", "true"));
+
+        startQueryEngines();
+        int nativeC = nativeEngine.getProjectionCount(TEST_QUERY44);
+        int newC = newEngine.getProjectionCount(TEST_QUERY44);
+        System.out.println("nativeEngine: " + nativeC);
+        System.out.println("newEngine: " + newC);
+        assertEquals(newC, nativeC);
+        shutdownQueryEngines();
     }
 
     private void test_tpcdsPlanTest(String query)

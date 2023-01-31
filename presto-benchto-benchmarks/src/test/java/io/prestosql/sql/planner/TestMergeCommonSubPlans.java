@@ -17,6 +17,7 @@ import org.testng.annotations.Test;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Objects;
 import java.util.stream.IntStream;
 
 import static io.prestosql.testing.TestingSession.testSessionBuilder;
@@ -53,6 +54,35 @@ public class TestMergeCommonSubPlans extends BasePlanTest
         HashScorePrinter hashCounter = new HashScorePrinter();
         node.accept(hashCounter, 0);
         return hashCounter.getCteCounter();
+    }
+
+    public int getProjectionCount(String sql)
+    {
+        PlanNode node = plan(sql).getRoot();
+        ProjectionCounter pc = new ProjectionCounter();
+        node.accept(pc, null);
+        return pc.getProjectionCount();
+    }
+
+    private static class ProjectionCounter extends InternalPlanVisitor<Void, Integer>
+    {
+        int projectionCount;
+        @Override
+        public Void visitPlan(PlanNode node, Integer context)
+        {
+            if (node instanceof ProjectNode) {
+                projectionCount++;
+            }
+            for (PlanNode source : node.getSources()) {
+                source.accept(this, null);
+            }
+            return null;
+        }
+
+        public int getProjectionCount()
+        {
+            return projectionCount;
+        }
     }
 
     private static class HashScorePrinter extends InternalPlanVisitor<Void, Integer>
@@ -108,6 +138,12 @@ public class TestMergeCommonSubPlans extends BasePlanTest
                 }
             }
         }
+    }
+
+    @Test
+    public void test_hash()
+    {
+        System.out.println(Objects.hash(true, false) + " " + Objects.hash(false, true));
     }
 
 
