@@ -169,23 +169,6 @@ public class MergeCommonSubPlans implements PlanOptimizer
             this.hashStats = stats;
         }
 
-        private boolean isNotScanFilterProject(PlanNode node)
-        {
-            if (node.getSources().size() > 1) {
-                return true;
-            }
-            if (!(node instanceof TableScanNode) && !(node instanceof FilterNode) && !(node instanceof ProjectNode)) {
-                return true;
-            }
-            if (node instanceof TableScanNode) {
-                return false;
-            }
-            if (node instanceof FilterNode && (node.getSources().get(0) instanceof TableScanNode)) {
-                return false;
-            }
-            return !(node instanceof ProjectNode) || !(node.getSources().get(0) instanceof FilterNode) || !(node.getSources().get(0).getSources().get(0) instanceof TableScanNode);
-        }
-
 
         @Override
         public PlanNode visitPlan(PlanNode node, Void context) {
@@ -194,17 +177,12 @@ public class MergeCommonSubPlans implements PlanOptimizer
                 source = source.accept(this, null);
                 Integer hash = source.getHash();
                 if (ctePrifxMap.containsKey(hash)) {
+                    String ctePrefix = ctePrifxMap.get(hash);
+                    int commonRefNum = commonCteRefNum.get(hash);
                     source = source.accept(new RedundantCTERemover(hashStats, ctePrifxMap), null);
-                    if (isNotScanFilterProject(source)) {
-                        String ctePrefix = ctePrifxMap.get(hash);
-                        int commonRefNum = commonCteRefNum.get(hash);
-                        PlanNode parentCte = new CTEScanNode(idAllocator.getNextId(), source, source.getOutputSymbols(), Optional.empty(), ctePrefix, new HashSet<>(), commonRefNum);
-                        log.debug("cte node created with name " + ctePrefix + ", commonrefNum: " + commonRefNum);
-                        reWrittenSources.add(parentCte);
-                    }
-                    else {
-                        reWrittenSources.add(source);
-                    }
+                    PlanNode parentCte = new CTEScanNode(idAllocator.getNextId(), source, source.getOutputSymbols(), Optional.empty(), ctePrefix, new HashSet<>(), commonRefNum);
+                    log.debug("cte node created with name " + ctePrefix + ", commonrefNum: " + commonRefNum);
+                    reWrittenSources.add(parentCte);
                 } else {
                     reWrittenSources.add(source);
                 }
@@ -234,9 +212,8 @@ public class MergeCommonSubPlans implements PlanOptimizer
         public PlanNode visitPlan(PlanNode node, Void context)
         {
             if (node instanceof CTEScanNode) {
-              /*  int hash = ((CTEScanNode) node).getSource().getHash();
-                lastCTEfreq = this.hashStats.hashCounter.get(hash);*/
-                return ((CTEScanNode) node).getSource();
+                int hash = ((CTEScanNode) node).getSource().getHash();
+                lastCTEfreq = this.hashStats.hashCounter.get(hash);
             }
             if (node.getSources().isEmpty()) {
                 return node;
@@ -250,17 +227,18 @@ public class MergeCommonSubPlans implements PlanOptimizer
             List<PlanNode> reWrittenSources = new ArrayList<>();
 
             for (PlanNode source : node.getSources()) {
-               /* if (source instanceof CTEScanNode) {
+                if (source instanceof CTEScanNode
+                        && (isCTEAboveNonScan((CTEScanNode) source) || !isCTEAboveReusedScanNode((CTEScanNode) source))) {
                     PlanNode child = ((CTEScanNode) source).getSource();
                     reWrittenSources.add(child);
-                } else {*/
-                reWrittenSources.add(source.accept(this, null));
-               // }
+                } else {
+                    reWrittenSources.add(source.accept(this, null));
+                }
             }
             return node.replaceChildren(reWrittenSources);
         }
 
-        private boolean isCTEAboveShouldRemoveScan(CTEScanNode node)
+        private boolean isCTEAboveReusedScanNode(CTEScanNode node)
         {
             PlanNode scanNode = node.getSource();
             int scanFreq = this.hashStats.hashCounter.get(scanNode.getHash());
