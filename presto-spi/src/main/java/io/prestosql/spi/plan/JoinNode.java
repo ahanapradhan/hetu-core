@@ -56,6 +56,8 @@ public class JoinNode
     private final Optional<Boolean> spillable;
     private final Map<String, Symbol> dynamicFilters;
 
+    public Map<String, Symbol> symbolNamesToAbsoluteNames = new HashMap<>();
+
     @JsonCreator
     public JoinNode(
             @JsonProperty("id") PlanNodeId id,

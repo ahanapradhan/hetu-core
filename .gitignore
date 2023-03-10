@@ -29,3 +29,5 @@ node_modules
 */.idea
 */.gitignore
 */dependency-reduced-pom.xml
+presto-main/etc/*
+check_cte.sh

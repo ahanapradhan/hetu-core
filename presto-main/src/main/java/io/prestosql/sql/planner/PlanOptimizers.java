@@ -693,6 +693,7 @@ public class PlanOptimizers
         builder.add(new MergeCommonSubPlans(), new PruneCTENodes(metadata, typeAnalyzer, true, true));
 
         builder.add(new AddCacheTableWriterAboveCTEOptimizer(metadata));
+
         if (!forceSingleNode) {
             builder.add(new StatsRecordingPlanOptimizer(optimizerStats, new AddExchanges(metadata, typeAnalyzer, false)));
         }

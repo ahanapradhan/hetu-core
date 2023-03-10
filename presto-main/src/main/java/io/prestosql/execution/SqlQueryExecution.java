@@ -137,6 +137,7 @@ import static io.prestosql.SystemSessionProperties.isCrossRegionDynamicFilterEna
 import static io.prestosql.SystemSessionProperties.isEnableDynamicFiltering;
 import static io.prestosql.SystemSessionProperties.isQueryResourceTrackingEnabled;
 import static io.prestosql.SystemSessionProperties.isSnapshotEnabled;
+import static io.prestosql.SystemSessionProperties.isSubplanMergeEnabled;
 import static io.prestosql.execution.buffer.OutputBuffers.BROADCAST_PARTITION_ID;
 import static io.prestosql.execution.buffer.OutputBuffers.createInitialEmptyOutputBuffers;
 import static io.prestosql.execution.scheduler.SqlQueryScheduler.createSqlQueryScheduler;
@@ -203,6 +204,8 @@ public class SqlQueryExecution
     private AtomicInteger tryCount = new AtomicInteger(0);
     private final TableExecuteContextManager tableExecuteContextManager;
     private final boolean isMultiCoordinatorEnabled;
+
+
 
     public SqlQueryExecution(
             TableExecuteContextManager tableExecuteContextManager,
@@ -358,8 +361,7 @@ public class SqlQueryExecution
     }
 
     @Override
-    public DataSize getUserMemoryReservation()
-    {
+    public DataSize getUserMemoryReservation() {
         // acquire reference to scheduler before checking finalQueryInfo, because
         // state change listener sets finalQueryInfo and then clears scheduler when
         // the query finishes.
@@ -375,8 +377,7 @@ public class SqlQueryExecution
     }
 
     @Override
-    public DataSize getTotalMemoryReservation()
-    {
+    public DataSize getTotalMemoryReservation() {
         // acquire reference to scheduler before checking finalQueryInfo, because
         // state change listener sets finalQueryInfo and then clears scheduler when
         // the query finishes.
@@ -412,8 +413,7 @@ public class SqlQueryExecution
     }
 
     @Override
-    public Duration getTotalCpuTime()
-    {
+    public Duration getTotalCpuTime() {
         SqlQueryScheduler scheduler = queryScheduler.get();
         Optional<QueryInfo> finalQueryInfo = stateMachine.getFinalQueryInfo();
         if (finalQueryInfo.isPresent()) {
@@ -426,15 +426,13 @@ public class SqlQueryExecution
     }
 
     @Override
-    public BasicQueryInfo getBasicQueryInfo()
-    {
+    public BasicQueryInfo getBasicQueryInfo() {
         return stateMachine.getFinalQueryInfo()
                 .map(BasicQueryInfo::new)
                 .orElseGet(() -> stateMachine.getBasicQueryInfo(Optional.ofNullable(queryScheduler.get()).map(SqlQueryScheduler::getBasicStageStats)));
     }
 
-    private void findMappingFromPlan(Map<String, Set<String>> mapping, PlanNode sourceNode)
-    {
+    private void findMappingFromPlan(Map<String, Set<String>> mapping, PlanNode sourceNode) {
         if (sourceNode != null && sourceNode instanceof ProjectNode) {
             ProjectNode projectNode = (ProjectNode) sourceNode;
             Map<Symbol, RowExpression> assignments = projectNode.getAssignments().getMap();
@@ -525,8 +523,7 @@ public class SqlQueryExecution
         accumulator.put(level, cost);
     }
 
-    private Map<Integer, PlanCostEstimate> getResourceLimitFromPlan()
-    {
+    private Map<Integer, PlanCostEstimate> getResourceLimitFromPlan() {
         Map<Integer, PlanCostEstimate> planDepthWiseCost = new HashMap<>();
 
         getCostEstimateByStageLevel(plan.getRoot(), planDepthWiseCost, 0);
@@ -538,8 +535,7 @@ public class SqlQueryExecution
         return planDepthWiseCost;
     }
 
-    private boolean setResourceLimitsFromEstimates(PlanNodeId rootId)
-    {
+    private boolean setResourceLimitsFromEstimates(PlanNodeId rootId) {
         boolean result = true;
 
         /* Get Stage level plan and which plan to get the resource availability decision */
@@ -570,8 +566,7 @@ public class SqlQueryExecution
         return result;
     }
 
-    private void updateQueryResourceStats()
-    {
+    private void updateQueryResourceStats() {
         SqlQueryScheduler scheduler = queryScheduler.get();
         if (scheduler != null) {
             Duration totalCpu = scheduler.getTotalCpuTime();
@@ -583,8 +578,7 @@ public class SqlQueryExecution
     }
 
     @Override
-    public void start()
-    {
+    public void start() {
         try (SetThreadName ignored = new SetThreadName("Query-%s", stateMachine.getQueryId())) {
             try {
                 // transition to planning
@@ -604,8 +598,7 @@ public class SqlQueryExecution
                 try {
                     registerDynamicFilteringQuery(plan);
                     handleCrossRegionDynamicFilter(plan);
-                }
-                catch (Throwable e) {
+                } catch (Throwable e) {
                     // ignore any exception
                     log.warn("something unexpected happened.. cause: %s", e.getMessage());
                 }
@@ -636,8 +629,7 @@ public class SqlQueryExecution
                 if (!stateMachine.isDone()) {
                     scheduler.start();
                 }
-            }
-            catch (Throwable e) {
+            } catch (Throwable e) {
                 fail(e);
                 throwIfInstanceOf(e, Error.class);
                 log.warn(e, "Encountered error while scheduling query");
@@ -645,15 +637,13 @@ public class SqlQueryExecution
         }
     }
 
-    private void resumeQuery(OptionalLong snapshotId, PlanRoot plan)
-    {
+    private void resumeQuery(OptionalLong snapshotId, PlanRoot plan) {
         SqlQueryScheduler oldScheduler = queryScheduler.get();
         try {
             // Wait for previous scheduler to finish.
             // This is important, otherwise the old schedule may close split sources after the new scheduler has started.
             oldScheduler.doneScheduling().get();
-        }
-        catch (Exception e) {
+        } catch (Exception e) {
             throw new RuntimeException(e);
         }
 
@@ -670,8 +660,7 @@ public class SqlQueryExecution
         stateMachine.transitionToStarting();
     }
 
-    private SqlQueryScheduler createResumeScheduler(OptionalLong snapshotId, PlanRoot plan, OutputBuffers rootOutputBuffers)
-    {
+    private SqlQueryScheduler createResumeScheduler(OptionalLong snapshotId, PlanRoot plan, OutputBuffers rootOutputBuffers) {
         log.debug("createResumeScheduler snapshot Id: %d", snapshotId.orElse(0));
         MarkerAnnouncer announcer = splitManager.getMarkerAnnouncer(stateMachine.getSession());
         announcer.resumeSnapshot(snapshotId.orElse(0));
@@ -724,20 +713,16 @@ public class SqlQueryExecution
         return scheduler;
     }
 
-    private void resetOutputData(PlanRoot plan, OptionalLong snapshotId)
-    {
-        plan.getRoot().getFragment().getRoot().accept(new SimplePlanVisitor<Void>()
-        {
+    private void resetOutputData(PlanRoot plan, OptionalLong snapshotId) {
+        plan.getRoot().getFragment().getRoot().accept(new SimplePlanVisitor<Void>() {
             @Override
-            public Void visitTableFinish(TableFinishNode node, Void context)
-            {
+            public Void visitTableFinish(TableFinishNode node, Void context) {
                 super.visitTableFinish(node, context);
 
                 // Find table-finish-node, which contains handle to the table
                 if (analysis.getStatement() instanceof CreateTableAsSelect) {
                     metadata.resetCreateForRerun(getSession(), ((TableWriterNode.CreateTarget) node.getTarget()).getHandle(), OptionalLong.of(snapshotManager.computeSnapshotIndex(snapshotId)));
-                }
-                else {
+                } else {
                     metadata.resetInsertForRerun(getSession(), ((TableWriterNode.InsertTarget) node.getTarget()).getHandle(), OptionalLong.of(snapshotManager.computeSnapshotIndex(snapshotId)));
                 }
                 return null;
@@ -746,37 +731,31 @@ public class SqlQueryExecution
     }
 
     @Override
-    public void addStateChangeListener(StateChangeListener<QueryState> stateChangeListener)
-    {
+    public void addStateChangeListener(StateChangeListener<QueryState> stateChangeListener) {
         try (SetThreadName ignored = new SetThreadName("Query-%s", stateMachine.getQueryId())) {
             stateMachine.addStateChangeListener(stateChangeListener);
         }
     }
 
     @Override
-    public Session getSession()
-    {
+    public Session getSession() {
         return stateMachine.getSession();
     }
 
     @Override
-    public void addFinalQueryInfoListener(StateChangeListener<QueryInfo> stateChangeListener)
-    {
+    public void addFinalQueryInfoListener(StateChangeListener<QueryInfo> stateChangeListener) {
         stateMachine.addQueryInfoStateChangeListener(stateChangeListener);
     }
 
-    private PlanRoot analyzeQuery()
-    {
+    private PlanRoot analyzeQuery() {
         try {
             return doAnalyzeQuery();
-        }
-        catch (StackOverflowError e) {
+        } catch (StackOverflowError e) {
             throw new PrestoException(NOT_SUPPORTED, "statement is too large (stack overflow during analysis)");
         }
     }
 
-    private PlanRoot doAnalyzeQuery()
-    {
+    private PlanRoot doAnalyzeQuery() {
         // time analysis phase
         stateMachine.beginAnalysis();
         stateMachine.beginLogicalPlan();
@@ -854,8 +833,7 @@ public class SqlQueryExecution
         }
     }
 
-    private static Set<CatalogName> extractConnectors(Analysis analysis)
-    {
+    private static Set<CatalogName> extractConnectors(Analysis analysis) {
         ImmutableSet.Builder<CatalogName> connectors = ImmutableSet.builder();
 
         for (TableHandle tableHandle : analysis.getTables()) {
@@ -870,8 +848,7 @@ public class SqlQueryExecution
         return connectors.build();
     }
 
-    private synchronized void registerDynamicFilteringQuery(PlanRoot plan)
-    {
+    private synchronized void registerDynamicFilteringQuery(PlanRoot plan) {
         if (!isEnableDynamicFiltering(stateMachine.getSession())) {
             return;
         }
@@ -884,8 +861,7 @@ public class SqlQueryExecution
         dynamicFilterService.registerQuery(this, plan.getRoot());
     }
 
-    private void planDistribution(PlanRoot plan)
-    {
+    private void planDistribution(PlanRoot plan) {
         // time distribution planning
         stateMachine.beginDistributedPlanning();
 
@@ -899,8 +875,7 @@ public class SqlQueryExecution
             MarkerAnnouncer announcer = splitManager.getMarkerAnnouncer(session);
             announcer.setSnapshotManager(snapshotManager);
             outputStageExecutionPlan = distributedPlanner.plan(plan.getRoot(), session, SNAPSHOT, null, announcer.currentSnapshotId());
-        }
-        else {
+        } else {
             outputStageExecutionPlan = distributedPlanner.plan(plan.getRoot(), session, NORMAL, null, 0);
         }
         stateMachine.endDistributedPlanning();
@@ -970,13 +945,11 @@ public class SqlQueryExecution
         }
     }
 
-    private static void closeSplitSources(StageExecutionPlan plan)
-    {
+    private static void closeSplitSources(StageExecutionPlan plan) {
         for (SplitSource source : plan.getSplitSources().values()) {
             try {
                 source.close();
-            }
-            catch (Throwable t) {
+            } catch (Throwable t) {
                 log.warn(t, "Error closing split source");
             }
         }
@@ -987,14 +960,12 @@ public class SqlQueryExecution
     }
 
     @Override
-    public void cancelQuery()
-    {
+    public void cancelQuery() {
         stateMachine.transitionToCanceled();
     }
 
     @Override
-    public void suspendQuery()
-    {
+    public void suspendQuery() {
         try (SetThreadName ignored = new SetThreadName("Query-%s", stateMachine.getQueryId())) {
             SqlQueryScheduler scheduler = queryScheduler.get();
             if (scheduler != null) {
@@ -1003,8 +974,7 @@ public class SqlQueryExecution
                     stateMachine.transitionToSuspend();
                     suspendedWithRecoveryManager.set(true);
                     queryRecoveryManager.suspendQuery();
-                }
-                else {
+                } else {
                     // if both snapshot and recovery are disabled.
                     throw new PrestoException(NOT_SUPPORTED, "Either Snapshot or Recovery should be enabled to suspend Query");
                 }
@@ -1013,15 +983,13 @@ public class SqlQueryExecution
     }
 
     @Override
-    public void resumeQuery()
-    {
+    public void resumeQuery() {
         try (SetThreadName ignored = new SetThreadName("Query-%s", stateMachine.getQueryId())) {
             SqlQueryScheduler scheduler = queryScheduler.get();
             if (SystemSessionProperties.isRecoveryEnabled(stateMachine.getSession()) && suspendedWithRecoveryManager.get()) {
                 queryRecoveryManager.resumeQuery();
                 suspendedWithRecoveryManager.set(false);
-            }
-            else {
+            } else {
                 if (scheduler != null) {
                     scheduler.resume();
                 }
@@ -1031,14 +999,12 @@ public class SqlQueryExecution
     }
 
     @Override
-    public int getPriority()
-    {
+    public int getPriority() {
         return queryPriority.get();
     }
 
     @Override
-    public void setPriority(int priority)
-    {
+    public void setPriority(int priority) {
         try (SetThreadName ignored = new SetThreadName("Query-%s", stateMachine.getQueryId())) {
             queryPriority.set(priority);
             stateMachine.setPriority(priority);
@@ -1050,8 +1016,7 @@ public class SqlQueryExecution
     }
 
     @Override
-    public void spillQueryRevocableMemory()
-    {
+    public void spillQueryRevocableMemory() {
         try (SetThreadName ignored = new SetThreadName("Query-%s", stateMachine.getQueryId())) {
             SqlQueryScheduler scheduler = queryScheduler.get();
             if (scheduler != null) {
@@ -1061,8 +1026,7 @@ public class SqlQueryExecution
     }
 
     @Override
-    public void cancelStage(StageId stageId)
-    {
+    public void cancelStage(StageId stageId) {
         requireNonNull(stageId, "stageId is null");
 
         try (SetThreadName ignored = new SetThreadName("Query-%s", stateMachine.getQueryId())) {
@@ -1074,52 +1038,44 @@ public class SqlQueryExecution
     }
 
     @Override
-    public void fail(Throwable cause)
-    {
+    public void fail(Throwable cause) {
         requireNonNull(cause, "cause is null");
 
         stateMachine.transitionToFailed(cause);
     }
 
     @Override
-    public boolean isDone()
-    {
+    public boolean isDone() {
         return getState().isDone();
     }
 
     @Override
-    public void addOutputInfoListener(Consumer<QueryOutputInfo> listener)
-    {
+    public void addOutputInfoListener(Consumer<QueryOutputInfo> listener) {
         stateMachine.addOutputInfoListener(listener);
     }
 
     @Override
-    public ListenableFuture<QueryState> getStateChange(QueryState currentState)
-    {
+    public ListenableFuture<QueryState> getStateChange(QueryState currentState) {
         return stateMachine.getStateChange(currentState);
     }
 
     @Override
-    public void recordHeartbeat()
-    {
+    public void recordHeartbeat() {
         stateMachine.recordHeartbeat();
     }
 
     @Override
-    public void pruneInfo()
-    {
+    public void pruneInfo() {
         stateMachine.pruneQueryInfo();
     }
 
     @Override
-    public QueryId getQueryId()
-    {
+    public QueryId getQueryId() {
         return stateMachine.getQueryId();
     }
 
     @Override
-    public QueryInfo getQueryInfo()
-    {
+    public QueryInfo getQueryInfo() {
         try (SetThreadName ignored = new SetThreadName("Query-%s", stateMachine.getQueryId())) {
             // acquire reference to scheduler before checking finalQueryInfo, because
             // state change listener sets finalQueryInfo and then clears scheduler when
@@ -1131,37 +1087,31 @@ public class SqlQueryExecution
     }
 
     @Override
-    public void setTryCount(int tryCount)
-    {
+    public void setTryCount(int tryCount) {
         this.tryCount.set(tryCount);
     }
 
     @Override
-    public int getTryCount()
-    {
+    public int getTryCount() {
         return this.tryCount.get();
     }
 
     @Override
-    public boolean isRunningAsync()
-    {
+    public boolean isRunningAsync() {
         return stateMachine.isRunningAsync();
     }
 
     @Override
-    public QueryState getState()
-    {
+    public QueryState getState() {
         return stateMachine.getQueryState();
     }
 
     @Override
-    public Plan getQueryPlan()
-    {
+    public Plan getQueryPlan() {
         return queryPlan.get();
     }
 
-    private QueryInfo buildQueryInfo(SqlQueryScheduler scheduler)
-    {
+    private QueryInfo buildQueryInfo(SqlQueryScheduler scheduler) {
         Optional<StageInfo> stageInfo = Optional.empty();
         if (scheduler != null) {
             stageInfo = Optional.ofNullable(scheduler.getStageInfo());
@@ -1176,38 +1126,32 @@ public class SqlQueryExecution
         return queryInfo;
     }
 
-    private static class PlanRoot
-    {
+    private static class PlanRoot {
         private final SubPlan root;
         private final boolean summarizeTaskInfos;
         private final Set<CatalogName> connectors;
 
-        public PlanRoot(SubPlan root, boolean summarizeTaskInfos, Set<CatalogName> connectors)
-        {
+        public PlanRoot(SubPlan root, boolean summarizeTaskInfos, Set<CatalogName> connectors) {
             this.root = requireNonNull(root, "root is null");
             this.summarizeTaskInfos = summarizeTaskInfos;
             this.connectors = ImmutableSet.copyOf(connectors);
         }
 
-        public SubPlan getRoot()
-        {
+        public SubPlan getRoot() {
             return root;
         }
 
-        public boolean isSummarizeTaskInfos()
-        {
+        public boolean isSummarizeTaskInfos() {
             return summarizeTaskInfos;
         }
 
-        public Set<CatalogName> getConnectors()
-        {
+        public Set<CatalogName> getConnectors() {
             return connectors;
         }
     }
 
     public static class SqlQueryExecutionFactory
-            implements QueryExecutionFactory<QueryExecution>
-    {
+            implements QueryExecutionFactory<QueryExecution> {
         private final SplitSchedulerStats schedulerStats;
         private final int scheduleSplitBatchSize;
         private final Metadata metadata;
@@ -1320,8 +1264,7 @@ public class SqlQueryExecution
                         .expireAfterAccess(java.time.Duration.ofMillis(hetuConfig.getExecutionPlanCacheTimeout()))
                         .maximumSize(hetuConfig.getExecutionPlanCacheMaxItems())
                         .build());
-            }
-            else {
+            } else {
                 this.cache = Optional.empty();
             }
 
@@ -1338,8 +1281,7 @@ public class SqlQueryExecution
         }
 
         // Loading properties into PropertyService for later reference
-        private void loadConfigToService(HetuConfig hetuConfig)
-        {
+        private void loadConfigToService(HetuConfig hetuConfig) {
             PropertyService.setProperty(HetuConstant.SPLIT_CACHE_MAP_ENABLED, hetuConfig.isSplitCacheMapEnabled());
             PropertyService.setProperty(HetuConstant.SPLIT_CACHE_STATE_UPDATE_INTERVAL, hetuConfig.getSplitCacheStateUpdateInterval());
         }
@@ -1349,8 +1291,7 @@ public class SqlQueryExecution
                 PreparedQuery preparedQuery,
                 QueryStateMachine stateMachine,
                 String slug,
-                WarningCollector warningCollector)
-        {
+                WarningCollector warningCollector) {
             String executionPolicyName = SystemSessionProperties.getExecutionPolicy(stateMachine.getSession());
             ExecutionPolicy localExecutionPolicy = executionPolicies.get(executionPolicyName);
             checkArgument(localExecutionPolicy != null, "No execution policy %s", localExecutionPolicy);

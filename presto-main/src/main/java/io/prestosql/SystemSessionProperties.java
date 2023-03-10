@@ -1100,7 +1100,7 @@ public final class SystemSessionProperties
 
     private static boolean validateFeatureDisable(boolean inputValue, boolean configValue, String name)
     {
-        if (configValue == false && inputValue == true) {
+        if (!configValue && inputValue) {
             throw new PrestoException(INVALID_SESSION_PROPERTY, format("%s can only be disabled for a session (if enabled in startup config); to enable first enable in the startup config", name));
         }
 

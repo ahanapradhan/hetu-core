@@ -296,7 +296,6 @@ public class AggregationNode
         this.finalizeSymbol = finalizeSymbol;
     }
 
-
     public static class GroupingSetDescriptor implements CustomHashComputable
     {
         private final List<Symbol> groupingKeys;

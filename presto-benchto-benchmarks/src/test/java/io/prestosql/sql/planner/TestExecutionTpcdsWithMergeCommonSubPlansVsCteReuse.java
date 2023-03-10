@@ -4,7 +4,6 @@ import com.google.common.collect.ImmutableMap;
 import io.prestosql.SystemSessionProperties;
 import io.prestosql.plugin.tpcds.TpcdsPlugin;
 import io.prestosql.testing.MaterializedResult;
-import io.prestosql.testing.QueryRunner;
 import io.prestosql.tests.DistributedQueryRunner;
 import org.testng.annotations.Test;
 
@@ -72,6 +71,12 @@ public class TestExecutionTpcdsWithMergeCommonSubPlansVsCteReuse
                 SystemSessionProperties.SUBPLAN_MERGE_ENABLED, "true",
                 SystemSessionProperties.CTE_REUSE_ENABLED, "false"));
         nativeEngine.init();
+    }
+
+    @Test
+    public void test_execute()
+    {
+        nativeEngine.execute(TEST_QUERY);
     }
 
 }
