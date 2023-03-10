@@ -19,6 +19,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
+import io.prestosql.spi.CustomHashComputable;
 import io.prestosql.spi.function.FunctionHandle;
 import io.prestosql.spi.relation.CallExpression;
 import io.prestosql.spi.relation.RowExpression;
@@ -27,6 +28,7 @@ import javax.annotation.concurrent.Immutable;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -78,6 +80,7 @@ public class AggregationNode
             @JsonProperty("finalizeSymbol") Optional<Symbol> finalizeSymbol)
     {
         super(id);
+        this.NODE_TYPE_NAME = "aggregationNode";
 
         this.source = source;
         this.aggregations = ImmutableMap.copyOf(requireNonNull(aggregations, "aggregations is null"));
@@ -293,7 +296,8 @@ public class AggregationNode
         this.finalizeSymbol = finalizeSymbol;
     }
 
-    public static class GroupingSetDescriptor
+
+    public static class GroupingSetDescriptor implements CustomHashComputable
     {
         private final List<Symbol> groupingKeys;
         private final int groupingSetCount;
@@ -333,6 +337,17 @@ public class AggregationNode
         public Set<Integer> getGlobalGroupingSets()
         {
             return globalGroupingSets;
+        }
+
+        @Override
+        public int computeHash() {
+            List<Object> args = new ArrayList<>();
+            args.addAll(globalGroupingSets);
+            for (Symbol s : groupingKeys) {
+                args.add(s.computeHash());
+            }
+            args.add(groupingSetCount);
+            return Objects.hash(args);
         }
     }
 
@@ -383,7 +398,7 @@ public class AggregationNode
         }
     }
 
-    public static class Aggregation
+    public static class Aggregation implements CustomHashComputable
     {
         private final CallExpression functionCall;
         private final List<RowExpression> arguments;
@@ -474,11 +489,42 @@ public class AggregationNode
         {
             return Objects.hash(functionCall, arguments, distinct, filter, orderingScheme, mask);
         }
+
+        @Override
+        public int computeHash() {
+            List<Object> args = new ArrayList<>();
+            args.add(this.functionCall.getFunctionHandle());
+            //args.addAll(this.arguments);
+            args.add(distinct);
+            filter.ifPresent(args::add);
+            orderingScheme.ifPresent(args::add);
+            mask.ifPresent(args::add);
+            return Objects.hash(args);
+        }
     }
 
     public enum AggregationType
     {
         HASH,
         SORT_BASED
+    }
+
+    @Override
+    public void fillItemsForHash()
+    {
+        //itemsForHash.add(source.getItemsForHash());
+        List<Symbol> otputs = new ArrayList<>(outputs);
+        Collections.sort(otputs);
+        for (Symbol symbol : otputs) {
+            Aggregation agg = aggregations.get(symbol);
+            if (agg != null) {
+                itemsForHash.add(agg.computeHash());
+                itemsForHash.addAll(agg.arguments);
+            }
+        }
+        itemsForHash.add(step);
+        itemsForHash.addAll(preGroupedSymbols);
+        itemsForHash.add(groupingSets.computeHash());
+        super.fillItemsForHash();
     }
 }

@@ -108,6 +108,7 @@ import static io.prestosql.SystemSessionProperties.getCteMaxQueueSize;
 import static io.prestosql.SystemSessionProperties.getExecutionPolicy;
 import static io.prestosql.SystemSessionProperties.getTaskConcurrency;
 import static io.prestosql.SystemSessionProperties.isCTEReuseEnabled;
+import static io.prestosql.SystemSessionProperties.isSubplanMergeEnabled;
 import static io.prestosql.metadata.MetadataUtil.createQualifiedObjectName;
 import static io.prestosql.spi.plan.AggregationNode.singleGroupingSet;
 import static io.prestosql.sql.analyzer.SemanticExceptions.notSupportedException;
@@ -174,7 +175,7 @@ class RelationPlanner
             // of the view (e.g., if the underlying tables referenced by the view changed)
             Type[] types = scope.getRelationType().getAllFields().stream().map(Field::getType).toArray(Type[]::new);
             RelationPlan withCoercions = addCoercions(subPlan, types);
-            if ((!isCTEReuseEnabled(session) || getExecutionPolicy(session).equals("phased"))
+            if (((!isCTEReuseEnabled(session) && !isSubplanMergeEnabled(session)) || getExecutionPolicy(session).equals("phased"))
                     || (getCteMaxQueueSize(session) < getTaskConcurrency(session) * 2) || !(analysis.getStatement() instanceof Query) || !((Query) analysis.getStatement()).getWith().isPresent()) {
                 if (getCteMaxQueueSize(session) < getTaskConcurrency(session) * 2) {
                     LOG.info("Main queue size " + getCteMaxQueueSize(session) + "should be more than 2 times of concurrent task " + getTaskConcurrency(session));

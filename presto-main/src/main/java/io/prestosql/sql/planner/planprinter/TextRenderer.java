@@ -68,6 +68,8 @@ public class TextRenderer
                 .append(node.getIdentifier())
                 .append("\n");
 
+      //  output.append(indentMultilineString("hash score: " + node.getHash() + "\n", indent.detailIndent()));
+
         String columns = node.getOutputs().stream()
                 .map(s -> s.getSymbol() + ":" + s.getType())
                 .collect(joining(", "));

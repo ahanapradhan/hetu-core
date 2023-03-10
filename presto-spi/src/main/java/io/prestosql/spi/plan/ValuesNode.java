@@ -21,6 +21,7 @@ import io.prestosql.spi.relation.RowExpression;
 import javax.annotation.concurrent.Immutable;
 
 import java.util.List;
+import java.util.stream.Collectors;
 
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.collect.ImmutableList.toImmutableList;
@@ -115,5 +116,13 @@ public class ValuesNode
     {
         this.resumeSnapshotId = resumeSnapshotId;
         this.nextSnapshotId = nextSnapshotId;
+    }
+
+    @Override
+    public void fillItemsForHash()
+    {
+        itemsForHash.addAll(rows.stream()
+                .flatMap(List::stream)
+                .collect(Collectors.toList()));
     }
 }

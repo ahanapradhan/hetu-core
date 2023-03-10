@@ -54,6 +54,7 @@ public class IndexSourceNode
             @JsonProperty("currentConstraint") TupleDomain<ColumnHandle> currentConstraint)
     {
         super(id);
+        this.NODE_TYPE_NAME = "indexSourceNode";
         this.indexHandle = requireNonNull(indexHandle, "indexHandle is null");
         this.tableHandle = requireNonNull(tableHandle, "tableHandle is null");
         this.lookupSymbols = ImmutableSet.copyOf(requireNonNull(lookupSymbols, "lookupSymbols is null"));

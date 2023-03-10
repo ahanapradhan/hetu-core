@@ -14,7 +14,9 @@
  */
 package io.prestosql.sql.planner.optimizations;
 
+import io.airlift.log.Logger;
 import io.prestosql.Session;
+import io.prestosql.execution.SqlQueryExecution;
 import io.prestosql.execution.warnings.WarningCollector;
 import io.prestosql.metadata.Metadata;
 import io.prestosql.spi.metadata.TableHandle;
@@ -42,6 +44,7 @@ import java.util.Map;
 import java.util.Set;
 
 import static io.prestosql.SystemSessionProperties.isCTEReuseEnabled;
+import static io.prestosql.SystemSessionProperties.isSubplanMergeEnabled;
 import static java.util.Objects.requireNonNull;
 
 /*
@@ -50,6 +53,8 @@ import static java.util.Objects.requireNonNull;
 public class PruneCTENodes
         implements PlanOptimizer
 {
+    private static final Logger log = Logger.get(PruneCTENodes.class);
+
     private final Metadata metadata;
     private final TypeAnalyzer typeAnalyzer;
     private final boolean pruneCTEWithCrossJoin;
@@ -73,7 +78,7 @@ public class PruneCTENodes
         requireNonNull(symbolAllocator, "symbolAllocator is null");
         requireNonNull(idAllocator, "idAllocator is null");
 
-        if (!isCTEReuseEnabled(session)) {
+        if (!isCTEReuseEnabled(session) && !isSubplanMergeEnabled(session)) {
             return plan;
         }
         else {
@@ -119,16 +124,19 @@ public class PruneCTENodes
             Integer left = getChildCTERefNum(node.getLeft());
             Integer right = getChildCTERefNum(node.getRight());
 
+            log.debug("[ahana] left: " + left + ", right: " + right);
+
             if (pruneCTEWithCrossJoin && node.isCrossJoin()) {
-                if (left != null && right != null && left.equals(right) && checkCTELevel(node)) {
+                if (left != null && left.equals(right) && checkCTELevel(node)) {
                     cTEWithCrossJoinList.add(left);
                 }
             }
-            if (left != null && right != null && left.equals(right) && checkCTELevel(node)) {
+            if (left != null && left.equals(right) && checkCTELevel(node)) {
                 if (!isNodeAlreadyVisited) {
                     PlanNodeId probeCteNodeId = getProbeCTENodeId(node.getLeft());
                     if (probeCteNodeId != null) {
                         probeCTEToPrune.add(probeCteNodeId);
+                        log.debug("[ahana] probeCTEToPrune ");
                     }
                 }
             }
@@ -139,10 +147,12 @@ public class PruneCTENodes
         {
             int leftLevel = getChildCTELevel(node.getLeft(), 0);
             int rightLevel = getChildCTELevel(node.getRight(), 0);
+            log.debug("leftLevel: " + leftLevel + ", rightLevel: " + rightLevel);
             if (leftLevel == 0 || rightLevel == 0) {
                 return true;
             }
             else if (leftLevel == rightLevel) {
+                log.debug("[ahana] check CTE level returning false ");
                 return false;
             }
             return true;

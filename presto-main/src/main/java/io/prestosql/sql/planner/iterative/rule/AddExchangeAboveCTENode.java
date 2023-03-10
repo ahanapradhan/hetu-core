@@ -26,6 +26,7 @@ import java.util.Optional;
 
 import static io.prestosql.SystemSessionProperties.isCTEReuseEnabled;
 import static io.prestosql.SystemSessionProperties.isSnapshotEnabled;
+import static io.prestosql.SystemSessionProperties.isSubplanMergeEnabled;
 import static io.prestosql.sql.planner.plan.ExchangeNode.Scope.REMOTE;
 import static io.prestosql.sql.planner.plan.ExchangeNode.partitionedExchange;
 import static io.prestosql.sql.planner.plan.Patterns.cteScan;
@@ -41,7 +42,7 @@ public class AddExchangeAboveCTENode
     @Override
     public boolean isEnabled(Session session)
     {
-        return isCTEReuseEnabled(session) && !isSnapshotEnabled(session);
+        return (isCTEReuseEnabled(session) || isSubplanMergeEnabled(session)) && !isSnapshotEnabled(session);
     }
 
     @Override

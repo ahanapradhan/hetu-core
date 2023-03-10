@@ -152,8 +152,7 @@ import static java.util.concurrent.TimeUnit.SECONDS;
 
 @ThreadSafe
 public class SqlQueryExecution
-        implements QueryExecution
-{
+        implements QueryExecution {
     private static final Logger log = Logger.get(SqlQueryExecution.class);
 
     private static final OutputBufferId OUTPUT_BUFFER_ID = new OutputBufferId(0);
@@ -339,26 +338,22 @@ public class SqlQueryExecution
     }
 
     @Override
-    public String getSlug()
-    {
+    public String getSlug() {
         return slug;
     }
 
     @Override
-    public VersionedMemoryPoolId getMemoryPool()
-    {
+    public VersionedMemoryPoolId getMemoryPool() {
         return stateMachine.getMemoryPool();
     }
 
     @Override
-    public void setMemoryPool(VersionedMemoryPoolId poolId)
-    {
+    public void setMemoryPool(VersionedMemoryPoolId poolId) {
         stateMachine.setMemoryPool(poolId);
     }
 
     @Override
-    public QuerySnapshotManager getQuerySnapshotManager()
-    {
+    public QuerySnapshotManager getQuerySnapshotManager() {
         return snapshotManager;
     }
 
@@ -397,26 +392,22 @@ public class SqlQueryExecution
     }
 
     @Override
-    public DateTime getCreateTime()
-    {
+    public DateTime getCreateTime() {
         return stateMachine.getCreateTime();
     }
 
     @Override
-    public Optional<DateTime> getExecutionStartTime()
-    {
+    public Optional<DateTime> getExecutionStartTime() {
         return stateMachine.getExecutionStartTime();
     }
 
     @Override
-    public DateTime getLastHeartbeat()
-    {
+    public DateTime getLastHeartbeat() {
         return stateMachine.getLastHeartbeat();
     }
 
     @Override
-    public Optional<DateTime> getEndTime()
-    {
+    public Optional<DateTime> getEndTime() {
         return stateMachine.getEndTime();
     }
 
@@ -453,19 +444,16 @@ public class SqlQueryExecution
                     RowExpression expression = assignments.get(symbol);
                     if (expression instanceof VariableReferenceExpression) {
                         sets.add(((VariableReferenceExpression) expression).getName());
-                    }
-                    else {
+                    } else {
                         sets.add(expression.toString());
                     }
-                }
-                else {
+                } else {
                     for (Map.Entry<String, Set<String>> entry : mapping.entrySet()) {
                         if (entry.getValue().contains(symbol.getName())) {
                             RowExpression expression = assignments.get(symbol);
                             if (expression instanceof VariableReferenceExpression) {
                                 entry.getValue().add(((VariableReferenceExpression) expression).getName());
-                            }
-                            else {
+                            } else {
                                 entry.getValue().add(expression.toString());
                             }
                         }
@@ -479,8 +467,7 @@ public class SqlQueryExecution
         }
     }
 
-    private void handleCrossRegionDynamicFilter(PlanRoot plan)
-    {
+    private void handleCrossRegionDynamicFilter(PlanRoot plan) {
         if (!isCrossRegionDynamicFilterEnabled(getSession()) || plan == null) {
             return;
         }
@@ -526,8 +513,7 @@ public class SqlQueryExecution
         log.debug("queryId=%s, add columnToSymbolMapping into hazelcast success.", queryId + QUERY_COLUMN_NAME_TO_SYMBOL_MAPPING);
     }
 
-    private void getCostEstimateByStageLevel(SubPlan current, Map<Integer, PlanCostEstimate> accumulator, int level)
-    {
+    private void getCostEstimateByStageLevel(SubPlan current, Map<Integer, PlanCostEstimate> accumulator, int level) {
         for (SubPlan child : current.getChildren()) {
             getCostEstimateByStageLevel(child, accumulator, level + 1);
         }
@@ -609,6 +595,11 @@ public class SqlQueryExecution
 
                 // analyze query
                 plan = analyzeQuery();
+
+                if (plan == null) {
+                    log.debug(" came after plan tree graph analysis");
+                    return;
+                }
 
                 try {
                     registerDynamicFilteringQuery(plan);

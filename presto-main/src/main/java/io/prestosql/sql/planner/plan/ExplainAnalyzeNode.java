@@ -43,6 +43,7 @@ public class ExplainAnalyzeNode
             @JsonProperty("verbose") boolean verbose)
     {
         super(id);
+        this.NODE_TYPE_NAME = "explainAnalyzeNode";
         this.source = requireNonNull(source, "source is null");
         this.outputSymbol = requireNonNull(outputSymbol, "outputSymbol is null");
         this.verbose = verbose;

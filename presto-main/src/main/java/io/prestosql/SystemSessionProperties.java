@@ -64,6 +64,8 @@ import static java.util.Objects.requireNonNull;
 
 public final class SystemSessionProperties
 {
+    public static final String CM_PARAMETER = "cm_parameter";
+
     public static final String OPTIMIZE_HASH_GENERATION = "optimize_hash_generation";
     public static final String JOIN_DISTRIBUTION_TYPE = "join_distribution_type";
     public static final String JOIN_MAX_BROADCAST_TABLE_SIZE = "join_max_broadcast_table_size";
@@ -172,6 +174,7 @@ public final class SystemSessionProperties
     public static final String CTE_MATERIALIZATION_THRESHOLD_SIZE = "cte_materialization_threshold_size";
     // CTE Optimization configurations
     public static final String CTE_REUSE_ENABLED = "cte_reuse_enabled";
+    public static final String SUBPLAN_MERGE_ENABLED = "subplan_merge_enabled";
     public static final String CTE_MAX_QUEUE_SIZE = "cte_max_queue_size";
     public static final String CTE_MAX_PREFETCH_QUEUE_SIZE = "cte_max_prefetch_queue_size";
     public static final String DELETE_TRANSACTIONAL_TABLE_DIRECT = "delete_transactional_table_direct";
@@ -810,6 +813,11 @@ public final class SystemSessionProperties
                         CTE_REUSE_ENABLED,
                         "Enabled CTE reuse",
                         featuresConfig.isCteReuseEnabled(),
+                        false),
+                booleanProperty(
+                        SUBPLAN_MERGE_ENABLED,
+                        "Enabled merging common subplans",
+                        featuresConfig.isSubplanMergeEnabled(),
                         false),
                 integerProperty(
                         CTE_MAX_QUEUE_SIZE,
@@ -1661,6 +1669,11 @@ public final class SystemSessionProperties
         return session.getSystemProperty(CTE_REUSE_ENABLED, Boolean.class);
     }
 
+    public static boolean isSubplanMergeEnabled(Session session)
+    {
+        return session.getSystemProperty(SUBPLAN_MERGE_ENABLED, Boolean.class);
+    }
+
     public static int getCteMaxPrefetchQueueSize(Session session)
     {
         return session.getSystemProperty(CTE_MAX_PREFETCH_QUEUE_SIZE, Integer.class);
@@ -1926,5 +1939,10 @@ public final class SystemSessionProperties
     public static DataSize getCteResultCacheThresholdSize(Session session)
     {
         return session.getSystemProperty(CTE_MATERIALIZATION_THRESHOLD_SIZE, DataSize.class);
+    }
+
+    public static int getCostModelParameter(Session session)
+    {
+        return session.getSystemProperty(CM_PARAMETER, Integer.class);
     }
 }

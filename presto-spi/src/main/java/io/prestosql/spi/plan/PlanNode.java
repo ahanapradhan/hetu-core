@@ -17,9 +17,13 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Streams;
+import io.airlift.log.Logger;
+import io.prestosql.spi.CustomHashComputable;
 
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
+import java.util.Objects;
 import java.util.stream.Collectors;
 
 import static io.prestosql.spi.plan.PlanNode.SkipOptRuleLevel.APPLY_ALL_RULES;
@@ -28,6 +32,12 @@ import static java.util.Objects.requireNonNull;
 @JsonTypeInfo(use = JsonTypeInfo.Id.MINIMAL_CLASS, property = "@type")
 public abstract class PlanNode
 {
+//    private static final Logger log = Logger.get(PlanNode.class);
+
+    protected List<Object> itemsForHash = new ArrayList<>();
+    protected String NODE_TYPE_NAME = "planNode";
+    protected long HASH = Long.parseLong("0");
+
     public enum SkipOptRuleLevel
     {
         APPLY_ALL_RULES,                // default behaviour
@@ -69,6 +79,13 @@ public abstract class PlanNode
 
     public abstract PlanNode replaceChildren(List<PlanNode> newChildren);
 
+    public PlanNode replaceChildrenWithHash(List<PlanNode> newChildren)
+    {
+        PlanNode node = replaceChildren(newChildren);
+        node.HASH = HASH;
+        return node;
+    }
+
     public <R, C> R accept(PlanVisitor<R, C> visitor, C context)
     {
         return visitor.visitPlan(this, context);
@@ -82,5 +99,47 @@ public abstract class PlanNode
     public SkipOptRuleLevel getSkipOptRuleLevel()
     {
         return this.skipOptRuleLevel;
+    }
+
+    public int getHash()
+    {
+        if (this.HASH == Long.parseLong("0")) {
+            List<Object> hashes = new ArrayList<>();
+            for (Object o : getItemsForHash()) {
+                if (o != null) {
+                    if (o instanceof CustomHashComputable) {
+                       /* if (this instanceof FilterNode) {
+                            System.out.println(o);
+                            System.out.println(((CustomHashComputable) o).computeHash());
+                        }*/
+                        hashes.add(((CustomHashComputable) o).computeHash());
+                    }
+                    else {
+                        hashes.add(o.hashCode());
+                    }
+                }
+            }
+            this.HASH = Objects.hash(hashes);
+        }
+        return (int) this.HASH;
+    }
+
+    protected void fillItemsForHash()
+    {
+        itemsForHash.add(NODE_TYPE_NAME);
+        List<Object> hashOfSources = new ArrayList<>();
+        for (PlanNode source : getSources()) {
+            hashOfSources.add(source.getHash());
+        }
+        itemsForHash.add(Objects.hashCode(hashOfSources));
+    }
+
+    public List<Object> getItemsForHash()
+    {
+        if (itemsForHash.isEmpty()) {
+            fillItemsForHash();
+           // log.debug(String.valueOf(itemsForHash));
+        }
+        return itemsForHash;
     }
 }

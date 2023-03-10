@@ -39,7 +39,7 @@ public class EnforceSingleRowNode
             @JsonProperty("source") PlanNode source)
     {
         super(id);
-
+        this.NODE_TYPE_NAME = "enforceSingleRowNode";
         this.source = requireNonNull(source, "source is null");
     }
 

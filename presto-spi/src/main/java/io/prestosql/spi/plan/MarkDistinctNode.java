@@ -44,6 +44,7 @@ public class MarkDistinctNode
             @JsonProperty("hashSymbol") Optional<Symbol> hashSymbol)
     {
         super(id);
+        this.NODE_TYPE_NAME = "markDistinct";
         this.source = source;
         this.markerSymbol = markerSymbol;
         this.hashSymbol = requireNonNull(hashSymbol, "hashSymbol is null");

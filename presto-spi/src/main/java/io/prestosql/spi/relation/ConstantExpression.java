@@ -15,6 +15,7 @@ package io.prestosql.spi.relation;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import io.airlift.slice.Slice;
 import io.prestosql.spi.block.Block;
 import io.prestosql.spi.predicate.Utils;
 import io.prestosql.spi.type.Type;
@@ -27,13 +28,11 @@ import static java.util.Objects.requireNonNull;
 
 @Immutable
 public final class ConstantExpression
-        extends RowExpression
-{
+        extends RowExpression {
     private final Object value;
     private final Type type;
 
-    public ConstantExpression(Object value, Type type)
-    {
+    public ConstantExpression(Object value, Type type) {
         requireNonNull(type, "type is null");
 
         this.value = value;
@@ -43,49 +42,52 @@ public final class ConstantExpression
     @JsonCreator
     public static ConstantExpression createConstantExpression(
             @JsonProperty("valueBlock") Block valueBlock,
-            @JsonProperty("type") Type type)
-    {
+            @JsonProperty("type") Type type) {
         return new ConstantExpression(Utils.blockToNativeValue(type, valueBlock), type);
     }
 
     @JsonProperty
-    public Block getValueBlock()
-    {
+    public Block getValueBlock() {
         return Utils.nativeValueToBlock(type, value);
     }
 
-    public Object getValue()
-    {
+    public Object getValue() {
         return value;
     }
 
-    public boolean isNull()
-    {
+    public boolean isNull() {
         return value == null;
     }
 
     @Override
     @JsonProperty
-    public Type getType()
-    {
+    public Type getType() {
         return type;
     }
 
     @Override
-    public String toString()
-    {
+    public String toString() {
         return String.valueOf(value);
     }
 
     @Override
-    public int hashCode()
-    {
+    public int hashCode() {
         return Objects.hash(value, type);
     }
 
     @Override
-    public boolean equals(Object obj)
+    public int computeHash()
     {
+        if (value instanceof Slice) {
+            Slice s = (Slice) value;
+            int hash = Objects.hash(s.getAddress(), s.hashCode(0, s.length()), type);
+            return hash;
+        }
+        return hashCode();
+    }
+
+    @Override
+    public boolean equals(Object obj) {
         if (this == obj) {
             return true;
         }
@@ -97,8 +99,12 @@ public final class ConstantExpression
     }
 
     @Override
-    public <R, C> R accept(RowExpressionVisitor<R, C> visitor, C context)
-    {
+    public <R, C> R accept(RowExpressionVisitor<R, C> visitor, C context) {
         return visitor.visitConstant(this, context);
+    }
+
+    @Override
+    public boolean absEquals(Object o) {
+        return equals(o);
     }
 }

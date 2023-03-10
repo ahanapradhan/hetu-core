@@ -79,6 +79,7 @@ public class ApplyNode
             @JsonProperty("originSubquery") Node originSubquery)
     {
         super(id);
+        this.NODE_TYPE_NAME = "applyNode";
         requireNonNull(input, "input is null");
         requireNonNull(subquery, "right is null");
         requireNonNull(subqueryAssignments, "assignments is null");

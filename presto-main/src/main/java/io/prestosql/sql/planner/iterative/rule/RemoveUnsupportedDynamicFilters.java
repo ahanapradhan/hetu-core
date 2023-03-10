@@ -16,6 +16,7 @@ package io.prestosql.sql.planner.iterative.rule;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import io.prestosql.Session;
+import io.prestosql.SystemSessionProperties;
 import io.prestosql.cost.CachingStatsProvider;
 import io.prestosql.cost.PlanNodeStatsEstimate;
 import io.prestosql.cost.StatsCalculator;
@@ -63,6 +64,7 @@ import static com.google.common.collect.Sets.intersection;
 import static io.prestosql.SystemSessionProperties.getDynamicFilteringMaxSize;
 import static io.prestosql.SystemSessionProperties.isCTEReuseEnabled;
 import static io.prestosql.SystemSessionProperties.isOptimizeDynamicFilterGeneration;
+import static io.prestosql.SystemSessionProperties.isSubplanMergeEnabled;
 import static io.prestosql.expressions.LogicalRowExpressions.TRUE_CONSTANT;
 import static io.prestosql.expressions.LogicalRowExpressions.extractAllPredicates;
 import static io.prestosql.expressions.LogicalRowExpressions.extractConjuncts;
@@ -100,11 +102,11 @@ public class RemoveUnsupportedDynamicFilters
         this.statsCalculator = requireNonNull(statsCalculator, "statsCalculator is null");
         this.logicalRowExpressions = new LogicalRowExpressions(new RowExpressionDeterminismEvaluator(metadata), new FunctionResolution(metadata.getFunctionAndTypeManager()), metadata.getFunctionAndTypeManager());
     }
-
     @Override
     public PlanNode optimize(PlanNode plan, Session session, TypeProvider types, PlanSymbolAllocator planSymbolAllocator, PlanNodeIdAllocator idAllocator, WarningCollector warningCollector)
     {
         this.removedDynamicFilterIds = new HashSet<>();
+
         this.statsProvider = new CachingStatsProvider(statsCalculator, session, planSymbolAllocator.getTypes());
         PlanWithConsumedDynamicFilters result = plan.accept(new RemoveUnsupportedDynamicFilters.Rewriter(session, metadata, removedDynamicFilterIds), ImmutableSet.of());
         return SimplePlanRewriter.rewriteWith(new RemoveFilterVisitor(removedDynamicFilterIds, this.metadata), result.getNode(), null);
@@ -273,7 +275,7 @@ public class RemoveUnsupportedDynamicFilters
                 }
                 // Keep only allowed dynamic filters
                 else {
-                    if (isCTEReuseEnabled(session)) {
+                    if (isCTEReuseEnabled(session) || isSubplanMergeEnabled(session)) {
                         modified = removeDynamicFiltersForCTE(original, allowedDynamicFilterIds, consumedDynamicFilterIds);
                     }
                     else {

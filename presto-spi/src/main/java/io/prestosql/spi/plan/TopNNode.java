@@ -119,4 +119,13 @@ public class TopNNode
             throw new PrestoException(errorCode, format(formatString, args));
         }
     }
+
+    @Override
+    public void fillItemsForHash()
+    {
+        itemsForHash.add(count);
+        itemsForHash.add(step);
+        itemsForHash.add(orderingScheme.computeHash());
+        super.fillItemsForHash();
+    }
 }

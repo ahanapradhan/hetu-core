@@ -14,6 +14,7 @@
 package io.prestosql.exchange;
 
 import com.google.common.collect.ImmutableList;
+import com.google.common.util.concurrent.ListenableFuture;
 import io.airlift.log.Logger;
 import io.airlift.slice.Slice;
 import io.hetu.core.transport.execution.buffer.PagesSerde;
@@ -88,11 +89,11 @@ public class FileSystemExchangeSource
         }
         synchronized (this) {
             if (this.blocked == null || this.blocked.isDone()) {
-                this.blocked = stats.getExchangeSourceBlocked().record(toCompletableFuture(
-                        nonCancellationPropagating(
-                                whenAnyComplete(readers.stream()
-                                        .map(ExchangeStorageReader::isBlocked)
-                                        .collect(toImmutableList())))));
+                ListenableFuture one = whenAnyComplete(readers.stream()
+                        .map(ExchangeStorageReader::isBlocked)
+                        .collect(toImmutableList()));
+                ListenableFuture two = nonCancellationPropagating(one);
+                this.blocked = stats.getExchangeSourceBlocked().record(toCompletableFuture(two));
             }
             return this.blocked;
         }

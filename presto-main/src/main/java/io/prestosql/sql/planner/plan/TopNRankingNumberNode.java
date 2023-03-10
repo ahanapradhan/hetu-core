@@ -27,6 +27,7 @@ import io.prestosql.spi.plan.WindowNode.Specification;
 import javax.annotation.concurrent.Immutable;
 
 import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
 
 import static com.google.common.base.Preconditions.checkArgument;
@@ -57,6 +58,7 @@ public final class TopNRankingNumberNode
     {
         super(id);
 
+        this.NODE_TYPE_NAME = "topNRankingNumberNode";
         requireNonNull(source, "source is null");
         requireNonNull(specification, "specification is null");
         checkArgument(specification.getOrderingScheme().isPresent(), "specification orderingScheme is absent");
@@ -151,5 +153,17 @@ public final class TopNRankingNumberNode
     public PlanNode replaceChildren(List<PlanNode> newChildren)
     {
         return new TopNRankingNumberNode(getId(), Iterables.getOnlyElement(newChildren), specification, rowNumberSymbol, maxRowCountPerPartition, partial, hashSymbol, rankingFunction);
+    }
+
+    @Override
+    public void fillItemsForHash()
+    {
+        itemsForHash.add(specification.computeHash());
+        itemsForHash.add(rowNumberSymbol);
+        itemsForHash.add(maxRowCountPerPartition);
+        itemsForHash.add(partial);
+        hashSymbol.ifPresent(itemsForHash::add);
+        rankingFunction.ifPresent(rf -> itemsForHash.add(Objects.hash(rf)));
+        super.fillItemsForHash();
     }
 }

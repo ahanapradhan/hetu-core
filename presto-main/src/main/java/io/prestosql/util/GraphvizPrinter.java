@@ -20,6 +20,7 @@ import com.google.common.collect.Iterables;
 import com.google.common.collect.Maps;
 import io.prestosql.spi.plan.AggregationNode;
 import io.prestosql.spi.plan.AggregationNode.Aggregation;
+import io.prestosql.spi.plan.CTEScanNode;
 import io.prestosql.spi.plan.FilterNode;
 import io.prestosql.spi.plan.GroupIdNode;
 import io.prestosql.spi.plan.JoinNode;
@@ -71,6 +72,8 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 import static com.google.common.collect.ImmutableList.toImmutableList;
@@ -106,6 +109,7 @@ public final class GraphvizPrinter
         INDEX_SOURCE,
         UNNEST,
         ANALYZE_FINISH,
+        CTESCAN,
     }
 
     private static final Map<NodeType, String> NODE_COLORS = immutableEnumMap(ImmutableMap.<NodeType, String>builder()
@@ -130,6 +134,7 @@ public final class GraphvizPrinter
             .put(NodeType.UNNEST, "crimson")
             .put(NodeType.SAMPLE, "goldenrod4")
             .put(NodeType.ANALYZE_FINISH, "plum")
+            .put(NodeType.CTESCAN, "indigo")
             .build());
 
     static {
@@ -512,6 +517,17 @@ public final class GraphvizPrinter
         }
 
         @Override
+        public Void visitCTEScan(CTEScanNode node, Void context)
+        {
+            String name = node.getCteRefName();
+            printNode(node, "CTEScan", name, NODE_COLORS.get(NodeType.CTESCAN));
+
+            node.getSource().accept(this, context);
+
+            return null;
+        }
+
+        @Override
         public Void visitAssignUniqueId(AssignUniqueId node, Void context)
         {
             printNode(node, "AssignUniqueId", NODE_COLORS.get(NodeType.PROJECT));
@@ -564,12 +580,54 @@ public final class GraphvizPrinter
             return null;
         }
 
+        private String handleSliceInLabel(String tmpLabel)
+        {
+         //   Pattern pattern = Pattern.compile("Slice\\{base*length=*\\}");
+            //Matcher matcher = pattern.matcher(tmpLabel);
+            //if (matcher.matches()) {
+            String escaped;// = pattern.matcher(tmpLabel).replaceAll("Slice\\\\{base*length=*\\\\}");
+          //  }
+
+            String SLICE_START = "Slice{base";
+            String ESCAPED_SLICE_START = "Slice\\{base";
+
+            if (tmpLabel.contains(SLICE_START)) {
+                String tmp = tmpLabel.replace(SLICE_START, ESCAPED_SLICE_START);
+                escaped = handleSliceEnd(tmp);
+            }
+            else {
+                escaped = tmpLabel;
+            }
+            return escaped;
+        }
+
+        private String handleSliceEnd(String s)
+        {
+            String escaped;
+            String SLICE_END_Q23 = "length=4}";
+            String SLICE_END_Q14 = "length=5}";
+
+            String ESCAPED_SLICE_END_Q23 = "length=4\\}";
+            String ESCAPED_SLICE_END_Q14 = "length=5\\}";
+            if (s.contains(SLICE_END_Q23)) {
+                escaped = s.replace(SLICE_END_Q23, ESCAPED_SLICE_END_Q23);
+            }
+            else if (s.contains(SLICE_END_Q14)) {
+                escaped = s.replace(SLICE_END_Q14, ESCAPED_SLICE_END_Q14);
+            }
+            else {
+                escaped = s;
+            }
+            return escaped;
+        }
+
         private void printNode(PlanNode node, String label, String color)
         {
             String nodeId = idGenerator.getNodeId(node);
             String tmpLabel = escapeSpecialCharacters(label);
+
             output.append(nodeId)
-                    .append(format("[label=\"{%s}\", style=\"rounded, filled\", shape=record, fillcolor=%s]", tmpLabel, color))
+                    .append(format("[label=\"\\{%s\\}\", style=\"rounded, filled\", shape=record, fillcolor=%s]", tmpLabel, color))
                     .append(';')
                     .append('\n');
         }
@@ -583,8 +641,11 @@ public final class GraphvizPrinter
                 String nodeId = idGenerator.getNodeId(node);
                 String tmpLabel = escapeSpecialCharacters(label);
                 String tmpDetails = escapeSpecialCharacters(details);
+
+                tmpDetails = handleSliceInLabel(tmpDetails);
+
                 output.append(nodeId)
-                        .append(format("[label=\"{%s|%s}\", style=\"rounded, filled\", shape=record, fillcolor=%s]", tmpLabel, tmpDetails, color))
+                        .append(format("[label=\"\\{%s|%s\\}\", style=\"rounded, filled\", shape=record, fillcolor=%s]", tmpLabel, tmpDetails, color))
                         .append(';')
                         .append('\n');
             }

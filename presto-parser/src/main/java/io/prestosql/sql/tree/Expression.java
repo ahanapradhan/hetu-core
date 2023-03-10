@@ -13,12 +13,14 @@
  */
 package io.prestosql.sql.tree;
 
+import io.prestosql.spi.CustomHashComputable;
 import io.prestosql.sql.ExpressionFormatter;
 
+import java.util.Objects;
 import java.util.Optional;
 
 public abstract class Expression
-        extends Node
+        extends Node implements CustomHashComputable
 {
     protected Expression(Optional<NodeLocation> location)
     {
@@ -43,5 +45,11 @@ public abstract class Expression
     public boolean absEquals(Object o)
     {
         return false;
+    }
+
+    @Override
+    public int computeHash()
+    {
+        return hashCode();
     }
 }

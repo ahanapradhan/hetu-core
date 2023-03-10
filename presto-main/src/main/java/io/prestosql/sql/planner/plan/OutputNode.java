@@ -24,7 +24,9 @@ import io.prestosql.spi.plan.Symbol;
 
 import javax.annotation.concurrent.Immutable;
 
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import static java.util.Objects.requireNonNull;
 
@@ -36,6 +38,8 @@ public class OutputNode
     private final List<String> columnNames;
     private final List<Symbol> outputs;
 
+    public Map<String, Symbol> symbolNamesToAbsoluteNames = new HashMap<String, Symbol>();
+
     @JsonCreator
     public OutputNode(@JsonProperty("id") PlanNodeId id,
             @JsonProperty("source") PlanNode source,
@@ -44,6 +48,7 @@ public class OutputNode
     {
         super(id);
 
+        this.NODE_TYPE_NAME = "outputNode";
         requireNonNull(source, "source is null");
         requireNonNull(columnNames, "columnNames is null");
         Preconditions.checkArgument(columnNames.size() == outputs.size(), "columnNames and assignments sizes don't match");
@@ -88,5 +93,12 @@ public class OutputNode
     public PlanNode replaceChildren(List<PlanNode> newChildren)
     {
         return new OutputNode(getId(), Iterables.getOnlyElement(newChildren), columnNames, outputs);
+    }
+
+    @Override
+    public void fillItemsForHash()
+    {
+        itemsForHash.addAll(source.getItemsForHash());
+        itemsForHash.addAll(outputs);
     }
 }

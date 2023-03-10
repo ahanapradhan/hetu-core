@@ -18,10 +18,12 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
+import io.prestosql.spi.CustomHashComputable;
 import io.prestosql.spi.relation.RowExpression;
 
 import javax.annotation.concurrent.Immutable;
 
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -30,6 +32,7 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
 
+import static com.google.common.base.MoreObjects.toStringHelper;
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static io.prestosql.spi.plan.JoinNode.DistributionType.PARTITIONED;
@@ -40,8 +43,7 @@ import static java.util.Objects.requireNonNull;
 
 @Immutable
 public class JoinNode
-        extends PlanNode
-{
+        extends PlanNode {
     private final Type type;
     private final PlanNode left;
     private final PlanNode right;
@@ -67,9 +69,10 @@ public class JoinNode
             @JsonProperty("rightHashSymbol") Optional<Symbol> rightHashSymbol,
             @JsonProperty("distributionType") Optional<DistributionType> distributionType,
             @JsonProperty("spillable") Optional<Boolean> spillable,
-            @JsonProperty("dynamicFilters") Map<String, Symbol> dynamicFilters)
-    {
+            @JsonProperty("dynamicFilters") Map<String, Symbol> dynamicFilters) {
         super(id);
+        this.NODE_TYPE_NAME = "joinNode";
+
         requireNonNull(type, "type is null");
         requireNonNull(left, "left is null");
         requireNonNull(right, "right is null");
@@ -123,8 +126,7 @@ public class JoinNode
         }
     }
 
-    public JoinNode flipChildren()
-    {
+    public JoinNode flipChildren() {
         return new JoinNode(
                 getId(),
                 flipType(type),
@@ -140,8 +142,7 @@ public class JoinNode
                 ImmutableMap.of()); // dynamicFilters are invalid after flipping children
     }
 
-    private static Type flipType(Type type)
-    {
+    private static Type flipType(Type type) {
         switch (type) {
             case INNER:
                 return Type.INNER;
@@ -156,15 +157,13 @@ public class JoinNode
         }
     }
 
-    private static List<EquiJoinClause> flipJoinCriteria(List<EquiJoinClause> joinCriteria)
-    {
+    private static List<EquiJoinClause> flipJoinCriteria(List<EquiJoinClause> joinCriteria) {
         return joinCriteria.stream()
                 .map(EquiJoinClause::flip)
                 .collect(toImmutableList());
     }
 
-    private static List<Symbol> flipOutputSymbols(List<Symbol> outputSymbols, PlanNode left, PlanNode right)
-    {
+    private static List<Symbol> flipOutputSymbols(List<Symbol> outputSymbols, PlanNode left, PlanNode right) {
         List<Symbol> leftSymbols = outputSymbols.stream()
                 .filter(symbol -> left.getOutputSymbols().contains(symbol))
                 .collect(Collectors.toList());
@@ -177,14 +176,12 @@ public class JoinNode
                 .build();
     }
 
-    public enum DistributionType
-    {
+    public enum DistributionType {
         PARTITIONED,
         REPLICATED
     }
 
-    public enum Type
-    {
+    public enum Type {
         INNER("InnerJoin"),
         LEFT("LeftJoin"),
         RIGHT("RightJoin"),
@@ -192,167 +189,147 @@ public class JoinNode
 
         private final String joinLabel;
 
-        Type(String joinLabel)
-        {
+        Type(String joinLabel) {
             this.joinLabel = joinLabel;
         }
 
-        public String getJoinLabel()
-        {
+        public String getJoinLabel() {
             return joinLabel;
         }
 
-        public boolean mustPartition()
-        {
+        public boolean mustPartition() {
             // With REPLICATED, the unmatched rows from right-side would be duplicated.
             return this == RIGHT || this == FULL;
         }
 
-        public boolean mustReplicate(List<JoinNode.EquiJoinClause> criteria)
-        {
+        public boolean mustReplicate(List<JoinNode.EquiJoinClause> criteria) {
             // There is nothing to partition on
             return criteria.isEmpty() && (this == INNER || this == LEFT);
         }
     }
 
     @JsonProperty("type")
-    public Type getType()
-    {
+    public Type getType() {
         return type;
     }
 
     @JsonProperty("left")
-    public PlanNode getLeft()
-    {
+    public PlanNode getLeft() {
         return left;
     }
 
     @JsonProperty("right")
-    public PlanNode getRight()
-    {
+    public PlanNode getRight() {
         return right;
     }
 
     @JsonProperty("criteria")
-    public List<EquiJoinClause> getCriteria()
-    {
+    public List<EquiJoinClause> getCriteria() {
         return criteria;
     }
 
     @JsonProperty("filter")
-    public Optional<RowExpression> getFilter()
-    {
+    public Optional<RowExpression> getFilter() {
         return filter;
     }
 
-    public Set<Symbol> getRightOutputSymbols()
-    {
+    public Set<Symbol> getRightOutputSymbols() {
         return ImmutableSet.copyOf(right.getOutputSymbols());
     }
 
     @JsonProperty("leftHashSymbol")
-    public Optional<Symbol> getLeftHashSymbol()
-    {
+    public Optional<Symbol> getLeftHashSymbol() {
         return leftHashSymbol;
     }
 
     @JsonProperty("rightHashSymbol")
-    public Optional<Symbol> getRightHashSymbol()
-    {
+    public Optional<Symbol> getRightHashSymbol() {
         return rightHashSymbol;
     }
 
     @Override
-    public List<PlanNode> getSources()
-    {
+    public List<PlanNode> getSources() {
         return ImmutableList.of(left, right);
     }
 
     @Override
     @JsonProperty("outputSymbols")
-    public List<Symbol> getOutputSymbols()
-    {
+    public List<Symbol> getOutputSymbols() {
         return outputSymbols;
     }
 
     @JsonProperty("distributionType")
-    public Optional<DistributionType> getDistributionType()
-    {
+    public Optional<DistributionType> getDistributionType() {
         return distributionType;
     }
 
     @JsonProperty("spillable")
-    public Optional<Boolean> isSpillable()
-    {
+    public Optional<Boolean> isSpillable() {
         return spillable;
     }
 
     @JsonProperty
-    public Map<String, Symbol> getDynamicFilters()
-    {
+    public Map<String, Symbol> getDynamicFilters() {
         return dynamicFilters;
     }
 
     @Override
-    public <R, C> R accept(PlanVisitor<R, C> visitor, C context)
-    {
+    public <R, C> R accept(PlanVisitor<R, C> visitor, C context) {
         return visitor.visitJoin(this, context);
     }
 
-    @Override
-    public PlanNode replaceChildren(List<PlanNode> newChildren)
+    public PlanNode modifyDynamicFilter(List<PlanNode> children, Map<String, Symbol> dfs)
     {
+        checkArgument(children.size() == 2, "expected newChildren to contain 2 nodes");
+        return new JoinNode(getId(), type, children.get(0), children.get(1), criteria, outputSymbols, filter, leftHashSymbol, rightHashSymbol, distributionType, spillable, dfs);
+    }
+
+    @Override
+    public PlanNode replaceChildren(List<PlanNode> newChildren) {
         checkArgument(newChildren.size() == 2, "expected newChildren to contain 2 nodes");
         return new JoinNode(getId(), type, newChildren.get(0), newChildren.get(1), criteria, outputSymbols, filter, leftHashSymbol, rightHashSymbol, distributionType, spillable, dynamicFilters);
     }
 
-    public JoinNode withDistributionType(DistributionType distributionType)
-    {
+    public JoinNode withDistributionType(DistributionType distributionType) {
         return new JoinNode(getId(), type, left, right, criteria, outputSymbols, filter, leftHashSymbol, rightHashSymbol, Optional.of(distributionType), spillable, dynamicFilters);
     }
 
-    public JoinNode withSpillable(boolean spillable)
-    {
+    public JoinNode withSpillable(boolean spillable) {
         return new JoinNode(getId(), type, left, right, criteria, outputSymbols, filter, leftHashSymbol, rightHashSymbol, distributionType, Optional.of(spillable), dynamicFilters);
     }
 
-    public boolean isCrossJoin()
-    {
+    public boolean isCrossJoin() {
         return criteria.isEmpty() && !filter.isPresent() && type == Type.INNER;
     }
 
     public static class EquiJoinClause
+        implements CustomHashComputable
     {
         private final Symbol left;
         private final Symbol right;
 
         @JsonCreator
-        public EquiJoinClause(@JsonProperty("left") Symbol left, @JsonProperty("right") Symbol right)
-        {
+        public EquiJoinClause(@JsonProperty("left") Symbol left, @JsonProperty("right") Symbol right) {
             this.left = requireNonNull(left, "left is null");
             this.right = requireNonNull(right, "right is null");
         }
 
         @JsonProperty("left")
-        public Symbol getLeft()
-        {
+        public Symbol getLeft() {
             return left;
         }
 
         @JsonProperty("right")
-        public Symbol getRight()
-        {
+        public Symbol getRight() {
             return right;
         }
 
-        public EquiJoinClause flip()
-        {
+        public EquiJoinClause flip() {
             return new EquiJoinClause(right, left);
         }
 
         @Override
-        public boolean equals(Object obj)
-        {
+        public boolean equals(Object obj) {
             if (this == obj) {
                 return true;
             }
@@ -367,16 +344,73 @@ public class JoinNode
                     Objects.equals(this.right, other.right);
         }
 
-        @Override
-        public int hashCode()
+        public boolean equals2(Object obj)
         {
+            if (this == obj) {
+                return true;
+            }
+
+            if (obj == null || !this.getClass().equals(obj.getClass())) {
+                return false;
+            }
+
+            EquiJoinClause other = (EquiJoinClause) obj;
+
+            boolean eq;
+
+            if (this.left != null && other.left != null) {
+                eq = this.left.equals2(other.left) || other.left.equals2(this.left);
+            } else if (this.left == null && other.left == null) {
+                eq = true;
+            } else {
+                eq = false;
+            }
+
+            if (this.right != null && other.right != null) {
+                eq = eq && (this.right.equals2(other.right) || other.right.equals2(this.right));
+            } else if (this.right == null && other.right == null) {
+                eq = eq;
+            } else {
+                eq = false;
+            }
+            return eq;
+        }
+
+        @Override
+        public int hashCode() {
             return Objects.hash(left, right);
         }
 
         @Override
-        public String toString()
-        {
+        public String toString() {
             return format("%s = %s", left, right);
         }
+
+        @Override
+        public int computeHash() {
+            return Objects.hash(left.computeHash(), right.computeHash());
+        }
     }
+
+    @Override
+    public String toString() {
+        return toStringHelper(this)
+                .add("criteria", criteria)
+                .add("outputSymbols", outputSymbols)
+                .add("left", left)
+                .add("right", right)
+                .add("type", type)
+                .toString();
+    }
+
+    @Override
+    public void fillItemsForHash()
+    {
+        itemsForHash.add(type);
+        itemsForHash.addAll(getCriteria());
+        itemsForHash.addAll(outputSymbols);
+        filter.ifPresent(itemsForHash::add);
+        super.fillItemsForHash();
+    }
+
 }

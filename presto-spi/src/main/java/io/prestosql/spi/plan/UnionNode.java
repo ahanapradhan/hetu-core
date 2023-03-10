@@ -20,6 +20,7 @@ import com.google.common.collect.ListMultimap;
 import javax.annotation.concurrent.Immutable;
 
 import java.util.List;
+import java.util.Map;
 
 @Immutable
 public class UnionNode
@@ -33,6 +34,7 @@ public class UnionNode
             @JsonProperty("outputs") List<Symbol> outputs)
     {
         super(id, sources, outputToInputs, outputs);
+        this.NODE_TYPE_NAME = "unionNode";
     }
 
     @Override
@@ -45,5 +47,15 @@ public class UnionNode
     public PlanNode replaceChildren(List<PlanNode> newChildren)
     {
         return new UnionNode(getId(), newChildren, getSymbolMapping(), getOutputSymbols());
+    }
+
+    @Override
+    protected void fillItemsForHash()
+    {
+        itemsForHash.addAll(getOutputSymbols());
+        for (Map.Entry<Symbol, Symbol> e : getSymbolMapping().entries()) {
+            itemsForHash.add(e.getValue());
+        }
+        super.fillItemsForHash();
     }
 }

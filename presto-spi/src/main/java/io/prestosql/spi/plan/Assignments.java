@@ -18,13 +18,16 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Predicate;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import io.prestosql.spi.CustomHashComputable;
 import io.prestosql.spi.relation.RowExpression;
 
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Objects;
 import java.util.Set;
 import java.util.function.BiConsumer;
 import java.util.stream.Collector;
@@ -34,7 +37,7 @@ import static java.util.Map.Entry.comparingByKey;
 import static java.util.Objects.requireNonNull;
 import static java.util.stream.Collectors.toMap;
 
-public class Assignments
+public class Assignments implements CustomHashComputable
 {
     public static Builder builder()
     {
@@ -165,6 +168,15 @@ public class Assignments
     public int hashCode()
     {
         return assignments.hashCode();
+    }
+
+    @Override
+    public int computeHash() {
+        List<Integer> exprs = new ArrayList<>();
+        for (Map.Entry<Symbol, RowExpression> a : assignments.entrySet()) {
+            exprs.add(Objects.hash(a.getKey().computeHash(), a.getValue().computeHash()));
+        }
+        return Objects.hash(exprs);
     }
 
     public static class Builder

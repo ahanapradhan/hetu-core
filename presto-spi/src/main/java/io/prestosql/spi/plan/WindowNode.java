@@ -19,6 +19,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
+import io.prestosql.spi.CustomHashComputable;
 import io.prestosql.spi.function.FunctionHandle;
 import io.prestosql.spi.relation.CallExpression;
 import io.prestosql.spi.relation.RowExpression;
@@ -27,6 +28,7 @@ import io.prestosql.spi.sql.expression.Types.WindowFrameType;
 
 import javax.annotation.concurrent.Immutable;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -60,7 +62,7 @@ public class WindowNode
             @JsonProperty("preSortedOrderPrefix") int preSortedOrderPrefix)
     {
         super(id);
-
+        this.NODE_TYPE_NAME = "windowNode";
         requireNonNull(source, "source is null");
         requireNonNull(specification, "specification is null");
         requireNonNull(windowFunctions, "windowFunctions is null");
@@ -161,7 +163,7 @@ public class WindowNode
     }
 
     @Immutable
-    public static class Specification
+    public static class Specification implements CustomHashComputable
     {
         private final List<Symbol> partitionBy;
         private final Optional<OrderingScheme> orderingScheme;
@@ -211,6 +213,16 @@ public class WindowNode
 
             return Objects.equals(this.partitionBy, other.partitionBy) &&
                     Objects.equals(this.orderingScheme, other.orderingScheme);
+        }
+
+        @Override
+        public int computeHash() {
+            List<Object> args = new ArrayList<>();
+            for (Symbol o : partitionBy) {
+                args.add(o.computeHash());
+            }
+            orderingScheme.ifPresent(os -> args.add(os.computeHash()));
+            return Objects.hash(args);
         }
     }
 

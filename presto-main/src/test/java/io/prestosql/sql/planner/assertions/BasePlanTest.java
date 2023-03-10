@@ -48,8 +48,8 @@ import static java.util.stream.Collectors.toList;
 
 public class BasePlanTest
 {
-    private final Map<String, String> sessionProperties;
-    private LocalQueryRunner queryRunner;
+    protected Map<String, String> sessionProperties;
+    protected LocalQueryRunner queryRunner;
 
     public BasePlanTest()
     {

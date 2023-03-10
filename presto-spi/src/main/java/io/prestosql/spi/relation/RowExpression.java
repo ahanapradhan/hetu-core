@@ -15,6 +15,7 @@ package io.prestosql.spi.relation;
 
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
+import io.prestosql.spi.CustomHashComputable;
 import io.prestosql.spi.type.Type;
 
 @JsonTypeInfo(
@@ -28,7 +29,7 @@ import io.prestosql.spi.type.Type;
         @JsonSubTypes.Type(value = InputReferenceExpression.class, name = "input"),
         @JsonSubTypes.Type(value = VariableReferenceExpression.class, name = "variable"),
         @JsonSubTypes.Type(value = ConstantExpression.class, name = "constant")})
-public abstract class RowExpression
+public abstract class RowExpression implements CustomHashComputable
 {
     public abstract Type getType();
 
@@ -39,12 +40,17 @@ public abstract class RowExpression
     public abstract int hashCode();
 
     @Override
+    public int computeHash()
+    {
+        return hashCode();
+    }
+
+    @Override
     public abstract String toString();
 
     public abstract <R, C> R accept(RowExpressionVisitor<R, C> visitor, C context);
 
-    public boolean absEquals(Object o)
-    {
+    public boolean absEquals(Object o) {
         return false;
     }
 }

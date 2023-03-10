@@ -17,10 +17,12 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Joiner;
 import com.google.common.collect.ImmutableList;
+import io.prestosql.spi.CustomHashComputable;
 import io.prestosql.spi.function.FunctionHandle;
 import io.prestosql.spi.function.OperatorType;
 import io.prestosql.spi.type.Type;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 import java.util.Objects;
@@ -29,7 +31,7 @@ import java.util.Optional;
 import static java.util.Objects.requireNonNull;
 
 public final class CallExpression
-        extends RowExpression
+        extends RowExpression implements CustomHashComputable
 {
     private final String displayName;
     private final FunctionHandle functionHandle;
@@ -111,6 +113,17 @@ public final class CallExpression
         }
         CallExpression other = (CallExpression) o;
         return Objects.equals(this.functionHandle, other.functionHandle) && Objects.equals(this.arguments, other.arguments);
+    }
+
+    @Override
+    public int computeHash()
+    {
+        List<Object> args = new ArrayList<>();
+        for (RowExpression rexp : arguments) {
+            args.add(rexp.computeHash());
+        }
+        args.add(functionHandle);
+        return Objects.hash(args);
     }
 
     @Override

@@ -13,9 +13,12 @@
  */
 package io.prestosql.spi.block;
 
+import io.prestosql.spi.CustomHashComputable;
 import io.prestosql.spi.type.Type;
 
-public enum SortOrder
+import java.util.Objects;
+
+public enum SortOrder implements CustomHashComputable
 {
     ASC_NULLS_FIRST(true, true),
     ASC_NULLS_LAST(true, false),
@@ -61,5 +64,12 @@ public enum SortOrder
 
         int result = type.compareTo(leftBlock, leftPosition, rightBlock, rightPosition);
         return ascending ? result : -result;
+    }
+
+    @Override
+    public int computeHash() {
+        String asc = this.ascending ? "true" : "false";
+        String nf = this.nullsFirst ? "true" : "false";
+        return Objects.hash(asc, nf);
     }
 }

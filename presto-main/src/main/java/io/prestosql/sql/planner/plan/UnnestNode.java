@@ -49,6 +49,7 @@ public class UnnestNode
             @JsonProperty("ordinalitySymbol") Optional<Symbol> ordinalitySymbol)
     {
         super(id);
+        this.NODE_TYPE_NAME = "unnest";
         this.source = requireNonNull(source, "source is null");
         this.replicateSymbols = ImmutableList.copyOf(requireNonNull(replicateSymbols, "replicateSymbols is null"));
         checkArgument(source.getOutputSymbols().containsAll(replicateSymbols), "Source does not contain all replicateSymbols");

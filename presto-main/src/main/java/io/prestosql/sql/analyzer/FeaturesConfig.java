@@ -64,6 +64,9 @@ import static java.util.concurrent.TimeUnit.MINUTES;
 })
 public class FeaturesConfig
 {
+
+    private int CMParameter = 2;
+
     @VisibleForTesting
     static final String SPILL_ENABLED = "experimental.spill-enabled";
     @VisibleForTesting
@@ -198,6 +201,7 @@ public class FeaturesConfig
     private DataSize cteMaterializationThresholdSize = new DataSize(128, MEGABYTE);
 
     private long joinPartitionedBuildMinRowCount = 1_000_000L;
+    private boolean subplanMergeEnabled = false;
 
     @Config("optimizer.transform-self-join-to-window")
     public FeaturesConfig setTransformSelfJoinToWindow(boolean value)
@@ -1408,6 +1412,18 @@ public class FeaturesConfig
         return this;
     }
 
+    public boolean isSubplanMergeEnabled()
+    {
+        return subplanMergeEnabled;
+    }
+
+    @Config("experimental.subplan-reuse-enabled")
+    public FeaturesConfig setSubplanMergeEnabled(boolean subplanMergeEnabled)
+    {
+        this.subplanMergeEnabled = subplanMergeEnabled;
+        return this;
+    }
+
     public int getMaxQueueSize()
     {
         return maxQueueSize;
@@ -1672,5 +1688,10 @@ public class FeaturesConfig
     {
         this.cteMaterializationThresholdSize = cteMaterializationThresholdSize;
         return this;
+    }
+
+    public int getCostModelParameter()
+    {
+        return CMParameter;
     }
 }

@@ -149,6 +149,7 @@ import io.prestosql.sql.planner.iterative.rule.RemoveRedundantLimit;
 import io.prestosql.sql.planner.iterative.rule.RemoveRedundantOffset;
 import io.prestosql.sql.planner.iterative.rule.RemoveRedundantSort;
 import io.prestosql.sql.planner.iterative.rule.RemoveRedundantTopN;
+import io.prestosql.sql.planner.iterative.rule.RemoveSpecificDynamicFilters;
 import io.prestosql.sql.planner.iterative.rule.RemoveTrivialFilters;
 import io.prestosql.sql.planner.iterative.rule.RemoveUnreferencedScalarApplyNodes;
 import io.prestosql.sql.planner.iterative.rule.RemoveUnreferencedScalarLateralNodes;
@@ -188,6 +189,7 @@ import io.prestosql.sql.planner.optimizations.HashGenerationOptimizer;
 import io.prestosql.sql.planner.optimizations.ImplementIntersectAndExceptAsUnion;
 import io.prestosql.sql.planner.optimizations.IndexJoinOptimizer;
 import io.prestosql.sql.planner.optimizations.LimitPushDown;
+import io.prestosql.sql.planner.optimizations.MergeCommonSubPlans;
 import io.prestosql.sql.planner.optimizations.MetadataQueryOptimizer;
 import io.prestosql.sql.planner.optimizations.OptimizeAggregationOverJoin;
 import io.prestosql.sql.planner.optimizations.OptimizeMixedDistinctAggregations;
@@ -688,6 +690,8 @@ public class PlanOptimizers
                             estimatedExchangesCostCalculator,
                             ImmutableSet.of(new PushTableWriteThroughUnion()))); // Must run before AddExchanges
         }
+        builder.add(new MergeCommonSubPlans(), new PruneCTENodes(metadata, typeAnalyzer, true, true));
+
         builder.add(new AddCacheTableWriterAboveCTEOptimizer(metadata));
         if (!forceSingleNode) {
             builder.add(new StatsRecordingPlanOptimizer(optimizerStats, new AddExchanges(metadata, typeAnalyzer, false)));
@@ -744,6 +748,7 @@ public class PlanOptimizers
         builder.add(pushdownDeleteRule);
 
         builder.add(new AddSortBasedAggregation(metadata, statsCalculator, costCalculator, costComparator));
+
         // Optimizers above this don't understand local exchanges, so be careful moving this.
         builder.add(new AddLocalExchanges(metadata, typeAnalyzer));
         // UseNonPartitionedJoinLookupSource needs to run after AddLocalExchanges since it operates on ExchangeNodes added by this optimizer.
@@ -787,6 +792,8 @@ public class PlanOptimizers
                         statsCalculator,
                         costCalculator,
                         ImmutableSet.of(new RemoveRedundantIdentityProjections())));
+
+        builder.add(new RemoveSpecificDynamicFilters(metadata));
 
         // DO NOT add optimizers that change the plan shape (computations) after this point
 

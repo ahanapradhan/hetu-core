@@ -14,6 +14,7 @@
 package io.prestosql.sql.tree;
 
 import com.google.common.collect.ImmutableList;
+import io.prestosql.spi.plan.TableScanNode;
 
 import java.util.List;
 import java.util.Objects;
@@ -64,5 +65,11 @@ public class SymbolReference
     public int hashCode()
     {
         return Objects.hash(name);
+    }
+
+    @Override
+    public int computeHash()
+    {
+        return Objects.hash(TableScanNode.getActualColName(name));
     }
 }

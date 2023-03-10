@@ -113,7 +113,7 @@ public final class OriginalExpressionUtils
         @Override
         public int hashCode()
         {
-            return Objects.hash(expression);
+            return Objects.hash(expression.computeHash());
         }
 
         @Override

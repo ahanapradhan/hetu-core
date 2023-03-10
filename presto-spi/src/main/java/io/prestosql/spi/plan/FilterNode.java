@@ -20,60 +20,74 @@ import com.google.common.collect.Iterables;
 import io.prestosql.spi.relation.RowExpression;
 
 import javax.annotation.concurrent.Immutable;
-
 import java.util.List;
 
 @Immutable
 public class FilterNode
-        extends PlanNode
-{
+        extends PlanNode {
+
+    private static final String FILTER = "filterNode";
     private final PlanNode source;
     private final RowExpression predicate;
 
     @JsonCreator
     public FilterNode(@JsonProperty("id") PlanNodeId id,
-            @JsonProperty("source") PlanNode source,
-            @JsonProperty("predicate") RowExpression predicate)
-    {
+                      @JsonProperty("source") PlanNode source,
+                      @JsonProperty("predicate") RowExpression predicate) {
         super(id);
 
+        this.NODE_TYPE_NAME = FILTER;
         this.source = source;
         this.predicate = predicate;
     }
 
     @JsonProperty("predicate")
-    public RowExpression getPredicate()
-    {
+    public RowExpression getPredicate() {
         return predicate;
     }
 
     @Override
-    public List<Symbol> getOutputSymbols()
-    {
+    public List<Symbol> getOutputSymbols() {
         return source.getOutputSymbols();
     }
 
     @Override
-    public List<PlanNode> getSources()
-    {
+    public List<PlanNode> getSources() {
         return ImmutableList.of(source);
     }
 
     @JsonProperty("source")
-    public PlanNode getSource()
-    {
+    public PlanNode getSource() {
         return source;
     }
 
     @Override
-    public <R, C> R accept(PlanVisitor<R, C> visitor, C context)
-    {
+    public <R, C> R accept(PlanVisitor<R, C> visitor, C context) {
         return visitor.visitFilter(this, context);
     }
 
     @Override
-    public PlanNode replaceChildren(List<PlanNode> newChildren)
-    {
+    public PlanNode replaceChildren(List<PlanNode> newChildren) {
         return new FilterNode(getId(), Iterables.getOnlyElement(newChildren), predicate);
     }
+
+    public boolean isPredicateSame(FilterNode curr)
+    {
+        boolean returnValue = false;
+        if (predicate != null) {
+            returnValue = predicate.absEquals(curr.getPredicate());
+        } else if (curr.getPredicate() == null) {
+            returnValue = true;
+        }
+
+        return returnValue;
+    }
+
+    @Override
+    protected void fillItemsForHash()
+    {
+        itemsForHash.add(predicate);
+        super.fillItemsForHash();
+    }
+
 }
