@@ -69,42 +69,8 @@ public class MergeCommonSubPlans implements PlanOptimizer
         return plan;
     }
 
-    private static class HashScorePrinter extends InternalPlanVisitor<Void, Integer>
-    {
-        private String getDetails(PlanNode node) {
-            String nodeType = node.getClass().toString().replace("class io.prestosql.spi.plan.", "").replace("class io.prestosql.sql.planner.plan.", "");
-            StringBuilder sb = new StringBuilder();
-            sb.append(nodeType).append(" ");
-            if (node instanceof TableScanNode) {
-                sb.append(((TableScanNode) node).getTable().getFullyQualifiedName());
-            }
-            if (node instanceof FilterNode) {
-                sb.append(((FilterNode) node).getPredicate().toString());
-            }
-            if (node instanceof ProjectNode) {
-                sb.append(((ProjectNode) node).getAssignments().getExpressions());
-            }
-            if (node instanceof AggregationNode) {
-                sb.append(((AggregationNode) node).getAggregations());
-            }
-            sb.append(" ").append(node.getOutputSymbols());
-            return sb.toString();
-        }
 
-        @Override
-        public Void visitPlan(PlanNode node, Integer context)
-        {
-            IntStream.range(0, context).boxed().forEach(i -> System.out.print("\t"));
-            System.out.println(getDetails(node) + " " + node.getHash());
-            for (PlanNode source : node.getSources()) {
-                source.accept(this, context + 1);
-            }
-            return null;
-        }
-    }
-
-
-        /**
+    /**
      * BFS order traversal and introduce CTE nodes
      */
     private PlanNode introduceCTEs(PlanNode root, PlanNodeIdAllocator idAllocator, HashComputerForPlanTree hashCounter) {
@@ -180,9 +146,14 @@ public class MergeCommonSubPlans implements PlanOptimizer
                     String ctePrefix = ctePrifxMap.get(hash);
                     int commonRefNum = commonCteRefNum.get(hash);
                     source = source.accept(new RedundantCTERemover(hashStats, ctePrifxMap), null);
-                    PlanNode parentCte = new CTEScanNode(idAllocator.getNextId(), source, source.getOutputSymbols(), Optional.empty(), ctePrefix, new HashSet<>(), commonRefNum);
-                    log.debug("cte node created with name " + ctePrefix + ", commonrefNum: " + commonRefNum);
-                    reWrittenSources.add(parentCte);
+                    if (!isNodeScanFilterProject(source)) {
+                        PlanNode parentCte = new CTEScanNode(idAllocator.getNextId(), source, source.getOutputSymbols(), Optional.empty(), ctePrefix, new HashSet<>(), commonRefNum);
+                        log.debug("cte node created with name " + ctePrefix + ", commonrefNum: " + commonRefNum);
+                        reWrittenSources.add(parentCte);
+                    }
+                    else {
+                        reWrittenSources.add(source);
+                    }
                 } else {
                     reWrittenSources.add(source);
                 }
@@ -192,6 +163,21 @@ public class MergeCommonSubPlans implements PlanOptimizer
                 node = node.replaceChildrenWithHash(reWrittenSources);
             }
             return node;
+        }
+
+        private boolean isNodeScanFilterProject(PlanNode source)
+        {
+            boolean pfscan = false;
+            boolean scan = (source instanceof TableScanNode);
+            boolean filter = source instanceof FilterNode && ((FilterNode)source).getSource() instanceof TableScanNode;
+            boolean project = source instanceof ProjectNode;
+            if (project) {
+                boolean pfilter = ((ProjectNode) source).getSource() instanceof FilterNode;
+                if (pfilter) {
+                    pfscan = ((FilterNode) ((ProjectNode) source).getSource()).getSource() instanceof TableScanNode;
+                }
+            }
+            return scan || filter || pfscan;
         }
 
     }
@@ -228,7 +214,7 @@ public class MergeCommonSubPlans implements PlanOptimizer
 
             for (PlanNode source : node.getSources()) {
                 if (source instanceof CTEScanNode
-                        && (isCTEAboveNonScan((CTEScanNode) source) || !isCTEAboveReusedScanNode((CTEScanNode) source))) {
+                       /* && (isCTEAboveNonScan((CTEScanNode) source) || !isCTEAboveReusedScanNode((CTEScanNode) source))*/) {
                     PlanNode child = ((CTEScanNode) source).getSource();
                     reWrittenSources.add(child);
                 } else {
@@ -278,12 +264,6 @@ public class MergeCommonSubPlans implements PlanOptimizer
                 ctx++;
             }
             return flag;
-        }
-
-        private boolean isCTEAboveNonScan(CTEScanNode cte)
-        {
-            PlanNode scanNode = cte.getSource();
-            return scanNode instanceof TableScanNode;
         }
     }
 

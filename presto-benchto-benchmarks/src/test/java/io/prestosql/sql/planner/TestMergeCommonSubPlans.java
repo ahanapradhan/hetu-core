@@ -132,7 +132,7 @@ public class TestMergeCommonSubPlans extends BasePlanTest
         }
 
         private void updateCteCounter(PlanNode node) {
-            if (node instanceof CTEScanNode) {
+            if (node instanceof CTEScanNode && !(((CTEScanNode) node).getSource() instanceof TableScanNode)) {
                 String cteName = ((CTEScanNode) node).getCteRefName();
                 if (this.cteCounter.containsKey(cteName)) {
                     this.cteCounter.put(cteName, cteCounter.get(cteName) + 1);

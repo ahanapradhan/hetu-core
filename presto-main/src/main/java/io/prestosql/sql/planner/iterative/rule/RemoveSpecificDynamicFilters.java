@@ -34,6 +34,13 @@ import java.util.Set;
 import static io.prestosql.sql.DynamicFilters.Function.NAME;
 import static java.util.Objects.requireNonNull;
 
+/**
+ * Dynamic Filters generated as well as consumed within a dynamically identified CTE node causes execution error in case of multinode
+ * cluster execution scenario when MergeCommonSubplans optimization is enabled.
+ * This optimizer is added to remove those specific dynamic filters.
+ * Therefore, it is for a hackish bugfix.
+ * Remove it if Dynamic filters inside CTE nodes causes no execution conflict.
+ */
 public class RemoveSpecificDynamicFilters
     implements PlanOptimizer
 {

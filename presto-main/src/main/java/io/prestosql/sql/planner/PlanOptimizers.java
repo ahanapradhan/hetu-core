@@ -794,7 +794,7 @@ public class PlanOptimizers
                         costCalculator,
                         ImmutableSet.of(new RemoveRedundantIdentityProjections())));
 
-        builder.add(new RemoveSpecificDynamicFilters(metadata));
+     //   builder.add(new RemoveSpecificDynamicFilters(metadata));
 
         // DO NOT add optimizers that change the plan shape (computations) after this point
 
